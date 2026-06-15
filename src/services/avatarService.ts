@@ -7,6 +7,20 @@ function isMaleVoice(name: string): boolean {
   return maleNames.some(name => lower.includes(name));
 }
 
+function cleanTextForSpeech(text: string): string {
+  if (!text) return "";
+  return text
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1") // Remove markdown links [Label](url) -> Label
+    .replace(/#+/g, "") // Remove headers (###, ##, etc.)
+    .replace(/^\s*[-+*•]\s+/gm, " ") // Remove bullet points/dashes from start of lines
+    .replace(/[\*_`]/g, "") // Remove formatting chars (bold, italic, inline code)
+    .replace(/\/\//g, " ") // Remove double slashes
+    .replace(/>/g, "") // Remove blockquote signs
+    .replace(/\n+/g, " ") // Replace newlines with spaces
+    .replace(/\s+/g, " ") // Normalize spaces
+    .trim();
+}
+
 async function speakWithGoogleCloudTTS(
   text: string,
   apiKey: string,
@@ -18,13 +32,7 @@ async function speakWithGoogleCloudTTS(
 ) {
   try {
     // Clean text
-    const cleanText = text
-      .replace(/•/g, "")
-      .replace(/\*/g, "")
-      .replace(/>/g, "")
-      .replace(/\n+/g, " ")
-      .replace(/\d\./g, "")
-      .trim();
+    const cleanText = cleanTextForSpeech(text);
 
     // Map pitch parameter [0.5, 2.0] to semitones [-20.0, 20.0]
     const semitones = (pitch - 1.0) * 8.0;
@@ -116,13 +124,7 @@ function speakWithWebSpeech(
     return;
   }
 
-  const cleanText = text
-    .replace(/•/g, "")
-    .replace(/\*/g, "")
-    .replace(/>/g, "")
-    .replace(/\n+/g, " ")
-    .replace(/\d\./g, "")
-    .trim();
+  const cleanText = cleanTextForSpeech(text);
 
   const utterance = new SpeechSynthesisUtterance(cleanText);
 

@@ -56,7 +56,6 @@ export function RobotHumanoid({ isThinking, isTyping, isWaving = false }: RobotH
     }
   };
 
-  // Draw faceplate contents (bezel, screen, eyes, mouth) onto canvas
   const drawFace = (time: number, glowColor: string) => {
     const ctx = faceCanvas.getContext("2d");
     if (!ctx) return;
@@ -65,60 +64,50 @@ export function RobotHumanoid({ isThinking, isTyping, isWaving = false }: RobotH
 
     ctx.save();
     ctx.translate(512, 512);
-    // Scale X by 0.55 to compensate for 3D stretch (aspect ratio + head non-uniform scale)
     ctx.scale(0.55, 1.0);
 
-    // 1. Draw Bezel (light silver/grey rounded rectangle)
+    // 1. Draw Bezel
     const bezelW = 1750;
     const bezelH = 760;
     const bezelX = -bezelW / 2;
     const bezelY = -bezelH / 2;
     const bezelR = 250;
-
     const bezelGrad = ctx.createLinearGradient(bezelX, bezelY, bezelX + bezelW, bezelY + bezelH);
     bezelGrad.addColorStop(0, "#ffffff");
     bezelGrad.addColorStop(0.4, "#f1f5f9");
     bezelGrad.addColorStop(0.8, "#cbd5e1");
     bezelGrad.addColorStop(1, "#94a3b8");
-
     ctx.fillStyle = bezelGrad;
     ctx.beginPath();
     drawRoundRect(ctx, bezelX, bezelY, bezelW, bezelH, bezelR);
     ctx.fill();
-
-    // Bezel border
     ctx.strokeStyle = "#94a3b8";
     ctx.lineWidth = 14;
     ctx.beginPath();
     drawRoundRect(ctx, bezelX, bezelY, bezelW, bezelH, bezelR);
     ctx.stroke();
 
-    // 2. Draw Visor Screen (glossy navy/black gradient rounded rectangle)
+    // 2. Draw Visor Screen
     const screenW = 1600;
     const screenH = 610;
     const screenX = -screenW / 2;
     const screenY = -screenH / 2;
     const screenR = 190;
-
     const screenGrad = ctx.createLinearGradient(0, screenY, 0, screenY + screenH);
     screenGrad.addColorStop(0, "#090d16");
     screenGrad.addColorStop(0.5, "#0d1527");
     screenGrad.addColorStop(1, "#121b30");
     ctx.fillStyle = screenGrad;
-
     ctx.beginPath();
     drawRoundRect(ctx, screenX, screenY, screenW, screenH, screenR);
     ctx.fill();
-
-    // Inner shadow border for screen depth
     ctx.strokeStyle = "#1a253c";
     ctx.lineWidth = 8;
     ctx.beginPath();
     drawRoundRect(ctx, screenX, screenY, screenW, screenH, screenR);
     ctx.stroke();
 
-    // 3. Draw Eyes and Mouth (glowing cyan/emerald - SOLID FILLED SHAPES)
-    // Setup glow effect
+    // 3. Draw Eyes and Mouth
     ctx.fillStyle = glowColor;
     ctx.shadowColor = glowColor;
     ctx.shadowBlur = 40;
@@ -126,11 +115,46 @@ export function RobotHumanoid({ isThinking, isTyping, isWaving = false }: RobotH
     const cycleTime = time % 4.0;
     const isBlinking = cycleTime > 3.85;
 
-    if (isBlinking) {
+    if (isThinking) {
+      // Thinking expression: narrow squinting eyes (thin horizontal bars) that pulse
+      const squintH = 22 + Math.sin(time * 2.0) * 6;
+      ctx.shadowBlur = 55;
+      ctx.strokeStyle = glowColor;
+      ctx.lineWidth = squintH;
+      ctx.lineCap = "round";
+      // Left eye squint
+      ctx.beginPath();
+      ctx.moveTo(-410, -40);
+      ctx.lineTo(-230, -40);
+      ctx.stroke();
+      // Right eye squint
+      ctx.beginPath();
+      ctx.moveTo(230, -40);
+      ctx.lineTo(410, -40);
+      ctx.stroke();
+      // Thinking mouth: small flat tight line (not smiling)
+      ctx.lineWidth = 28;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(-90, 120);
+      ctx.lineTo(90, 120);
+      ctx.stroke();
+      // Thinking indicator: three small pulsing dots below mouth
+      const dotAlpha = 0.4 + 0.6 * Math.abs(Math.sin(time * 3.0));
+      ctx.globalAlpha = dotAlpha;
+      ctx.shadowBlur = 20;
+      [-80, 0, 80].forEach((dx, i) => {
+        const pulsed = 0.4 + 0.6 * Math.abs(Math.sin(time * 3.0 + i * 1.2));
+        ctx.globalAlpha = pulsed;
+        ctx.beginPath();
+        ctx.arc(dx, 185, 18, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.globalAlpha = 1.0;
+    } else if (isBlinking) {
       ctx.strokeStyle = glowColor;
       ctx.lineWidth = 26;
       ctx.lineCap = "round";
-      // Draw blinking flat lines centered at new eye coordinates
       ctx.beginPath();
       ctx.moveTo(-410, -40);
       ctx.lineTo(-230, -40);
@@ -138,29 +162,30 @@ export function RobotHumanoid({ isThinking, isTyping, isWaving = false }: RobotH
       ctx.lineTo(410, -40);
       ctx.stroke();
     } else {
-      // Draw SOLID FILLED happy arches (semi-ellipses: ◠ ◠) using ctx.ellipse
-      // radiusX = 110, radiusY = 90 results in a beautiful wide arch on the squashed canvas.
+      // Normal happy arch eyes
       ctx.beginPath();
       ctx.ellipse(-320, -40, 110, 90, 0, Math.PI, 2 * Math.PI);
       ctx.fill();
-
       ctx.beginPath();
       ctx.ellipse(320, -40, 110, 90, 0, Math.PI, 2 * Math.PI);
       ctx.fill();
     }
 
-    // Draw Mouth (solid filled smile: ◡)
-    const mouthScaleY = isTyping ? (0.4 + Math.abs(Math.sin(time * 15.0)) * 0.8) : 1.0;
-    ctx.save();
-    ctx.translate(0, 100);
-    ctx.scale(1.0, mouthScaleY);
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 120, 50, 0, 0, Math.PI);
-    ctx.fill();
-    ctx.restore();
+    if (!isThinking) {
+      // Normal smile mouth
+      const mouthScaleY = isTyping ? (0.4 + Math.abs(Math.sin(time * 15.0)) * 0.8) : 1.0;
+      ctx.save();
+      ctx.translate(0, 100);
+      ctx.scale(1.0, mouthScaleY);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 120, 50, 0, 0, Math.PI);
+      ctx.fill();
+      ctx.restore();
+    }
 
     ctx.restore();
   };
+
 
   // Helper to create horizontally bent plane geometry
   const createBentPlaneGeometry = (w: number, h: number, cylinderR: number) => {
@@ -263,11 +288,19 @@ export function RobotHumanoid({ isThinking, isTyping, isWaving = false }: RobotH
         leftShoulderRef.current.rotation.z = THREE.MathUtils.lerp(leftShoulderRef.current.rotation.z, -0.05 + armSway, 0.05);
         leftShoulderRef.current.rotation.x = THREE.MathUtils.lerp(leftShoulderRef.current.rotation.x, armSway * 0.5, 0.05);
         leftShoulderRef.current.rotation.y = THREE.MathUtils.lerp(leftShoulderRef.current.rotation.y, 0, 0.05);
+      } else if (isThinking) {
+        // Thinking pose: right arm raised to chin, left arm crosses torso
+        const thinkSway = Math.sin(time * 0.8) * 0.015;
+        rightShoulderRef.current.rotation.x = THREE.MathUtils.lerp(rightShoulderRef.current.rotation.x, -0.55 + thinkSway, 0.06);
+        rightShoulderRef.current.rotation.y = THREE.MathUtils.lerp(rightShoulderRef.current.rotation.y, -0.35, 0.06);
+        rightShoulderRef.current.rotation.z = THREE.MathUtils.lerp(rightShoulderRef.current.rotation.z, 0.65, 0.06);
+        leftShoulderRef.current.rotation.x = THREE.MathUtils.lerp(leftShoulderRef.current.rotation.x, -0.15, 0.06);
+        leftShoulderRef.current.rotation.y = THREE.MathUtils.lerp(leftShoulderRef.current.rotation.y, 0.35, 0.06);
+        leftShoulderRef.current.rotation.z = THREE.MathUtils.lerp(leftShoulderRef.current.rotation.z, -0.45 + thinkSway, 0.06);
       } else if (isTyping) {
         leftShoulderRef.current.rotation.x = THREE.MathUtils.lerp(leftShoulderRef.current.rotation.x, -0.25 + Math.sin(time * 6.0) * 0.15, 0.1);
         leftShoulderRef.current.rotation.y = THREE.MathUtils.lerp(leftShoulderRef.current.rotation.y, 0.15 + Math.cos(time * 5.0) * 0.1, 0.1);
         leftShoulderRef.current.rotation.z = THREE.MathUtils.lerp(leftShoulderRef.current.rotation.z, -0.15 + Math.sin(time * 4.0) * 0.08, 0.1);
-
         rightShoulderRef.current.rotation.x = THREE.MathUtils.lerp(rightShoulderRef.current.rotation.x, -0.25 + Math.cos(time * 5.8) * 0.15, 0.1);
         rightShoulderRef.current.rotation.y = THREE.MathUtils.lerp(rightShoulderRef.current.rotation.y, -0.15 - Math.sin(time * 4.8) * 0.1, 0.1);
         rightShoulderRef.current.rotation.z = THREE.MathUtils.lerp(rightShoulderRef.current.rotation.z, 0.15 - Math.cos(time * 4.2) * 0.08, 0.1);
@@ -276,7 +309,6 @@ export function RobotHumanoid({ isThinking, isTyping, isWaving = false }: RobotH
         leftShoulderRef.current.rotation.z = THREE.MathUtils.lerp(leftShoulderRef.current.rotation.z, -0.05 + armSway, 0.05);
         leftShoulderRef.current.rotation.x = THREE.MathUtils.lerp(leftShoulderRef.current.rotation.x, armSway * 0.5, 0.05);
         leftShoulderRef.current.rotation.y = THREE.MathUtils.lerp(leftShoulderRef.current.rotation.y, 0, 0.05);
-
         rightShoulderRef.current.rotation.z = THREE.MathUtils.lerp(rightShoulderRef.current.rotation.z, 0.05 - armSway, 0.05);
         rightShoulderRef.current.rotation.x = THREE.MathUtils.lerp(rightShoulderRef.current.rotation.x, armSway * 0.5, 0.05);
         rightShoulderRef.current.rotation.y = THREE.MathUtils.lerp(rightShoulderRef.current.rotation.y, 0, 0.05);

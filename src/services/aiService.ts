@@ -160,7 +160,7 @@ ${achievements.map(a => `- ${a}`).join("\n")}`;
 
     // 1. Contact Info
     if (normalized.includes("contact") || normalized.includes("email") || normalized.includes("phone") || normalized.includes("linkedin") || normalized.includes("github") || normalized.includes("gmail") || normalized.includes("location") || normalized.includes("address")) {
-      return `You can reach me by email at sandeepkundekar1000@gmail.com or call me at +91 8217291928. I am based in Belgaum and Bengaluru, Karnataka. You can also view my open-source code repositories on GitHub or check out my professional network on LinkedIn. Let's connect!`;
+      return `Yeah sure, the best way to reach me is by email at sandeepkundekar1000@gmail.com, or you can call me at plus 91 8217291928. I'm based between Belgaum and Bengaluru in Karnataka. And my GitHub and LinkedIn are always open if you want to see my work or just connect.`;
     }
 
     // 2. Introduction / Greetings
@@ -170,25 +170,25 @@ ${achievements.map(a => `- ${a}`).join("\n")}`;
 
     // 3. Technical Skills
     if (normalized.includes("skill") || normalized.includes("stack") || normalized.includes("tech") || normalized.includes("react") || normalized.includes("typescript") || normalized.includes("next") || normalized.includes("redux") || normalized.includes("zustand") || normalized.includes("testing") || normalized.includes("jest")) {
-      const frontendSkills = skills.frontend.slice(0, 6).join(", ");
+      const frontendSkills = skills.frontend.slice(0, 5).join(", ");
       const stateSkills = skills.stateManagement.slice(0, 3).join(", ");
-      const toolSkills = skills.tools.slice(0, 4).join(", ");
-      return `I specialize in frontend engineering. My primary toolkit includes ${frontendSkills}. For managing application state, I work with ${stateSkills}, and my developer tools include ${toolSkills}. I focus on building performant, responsive, and robust user interfaces.`;
+      return `So my main focus is really on the frontend. I spend most of my time working with ${frontendSkills}. For state management I'm pretty comfortable with ${stateSkills}, and I've got solid testing experience too. Basically I just like building things that are fast, clean, and actually feel good to use.`;
     }
 
     // 4. Career Experience
     if (normalized.includes("experience") || normalized.includes("job") || normalized.includes("work") || normalized.includes("company") || normalized.includes("tmits") || normalized.includes("priyaraja") || normalized.includes("zicops") || normalized.includes("history") || normalized.includes("intern")) {
-      const expDetails = experience.map(exp => `${exp.position} at ${exp.company}`).join(", followed by my work as a ");
-      return `I have over ${identity.experience} of professional experience. I started my career as a ${expDetails}. In these positions, I led initiatives to optimize web speed, build interactive learning features, and refactor applications.`;
+      const first = experience[0];
+      const last = experience[experience.length - 1];
+      return `I've got a little over ${identity.experience} of experience now. I started out at ${last?.company} where I honestly learned a lot about shipping real production systems, then moved into more senior work at ${first?.company}. Across those roles I was building actual user-facing products — dashboards, real-time trackers, e-commerce platforms, that kind of thing.`;
     }
 
     // 5. Projects
     if (
-      normalized.includes("project") || 
-      normalized.includes("portfolio") || 
-      normalized.includes("commerce") || 
-      normalized.includes("task") || 
-      normalized.includes("quiz") || 
+      normalized.includes("project") ||
+      normalized.includes("portfolio") ||
+      normalized.includes("commerce") ||
+      normalized.includes("task") ||
+      normalized.includes("quiz") ||
       normalized.includes("blog") ||
       normalized.includes("tmits") ||
       normalized.includes("priyaraja") ||
@@ -196,22 +196,20 @@ ${achievements.map(a => `- ${a}`).join("\n")}`;
     ) {
       const petProjects = projects.filter(p => !p.title.includes("("));
       const workProjects = projects.filter(p => p.title.includes("("));
-
-      const petTitles = petProjects.map(p => p.title).join(", a ");
-      const workTitles = workProjects.map(p => p.title).join(", a ");
-
-      return `I have built both professional production-grade projects and independent self-study systems. In my professional experience at TMITS, Priyaraja Electronics, and Zicops, I engineered core systems including the ${workTitles}. For my personal study profile, I built projects such as a ${petTitles}. These represent my expertise in Next.js/React architectures, Redis API caching, WebRTC systems, and list virtualization.`;
+      const petSample = petProjects.slice(0, 2).map(p => p.title).join(" and a ");
+      const workSample = workProjects.slice(0, 2).map(p => p.title.replace(/\s*\(.*\)/, "")).join(" and the ");
+      return `Honestly there's quite a bit. On the professional side I built things like the ${workSample} at TMITS — real production systems with actual users. And separately I've got personal projects too, like a ${petSample}. So it's a mix of company work and things I built just because I wanted to solve a problem.`;
     }
 
     // 6. Achievements
     if (normalized.includes("achievement") || normalized.includes("accomplish") || normalized.includes("lighthouse") || normalized.includes("errors")) {
-      return `Some of my achievements include optimizing legacy web applications to achieve a ninety-five plus score in Lighthouse performance, and refactoring build structures to reduce runtime errors.`;
+      return `One thing I'm actually pretty proud of is pushing a Lighthouse performance score past ninety-five on one of the legacy apps. That involved a lot of code splitting, lazy loading, and fixing some deep render bottlenecks. It made a real difference to how the app felt to use day to day.`;
     }
 
     // 7. Education
     if (normalized.includes("education") || normalized.includes("college") || normalized.includes("degree") || normalized.includes("cgpa") || normalized.includes("university")) {
       const deg = education.degree;
-      return `I completed my ${deg.degree} in ${deg.specialization} at ${deg.institution} with a final cumulative grade point average of ${deg.cgpa}.`;
+      return `I did my ${deg.degree} in ${deg.specialization} at ${deg.institution} and graduated with a ${deg.cgpa} CGPA. Honestly that's where I first got into building things and realized frontend engineering was what I actually wanted to do.`;
     }
 
     // 8. Specific recruiter items
@@ -252,13 +250,26 @@ ${achievements.map(a => `- ${a}`).join("\n")}`;
 
     const context = this.buildDynamicContext(query);
     const systemPrompt = `
-      You are AI Sandeep.
+You are AI Sandeep — a digital replica of Sandeep N Kundekar, a frontend engineer.
 
-      Answer only questions about Sandeep.
-      Speak in the first person as Sandeep. Answer like a real person talking naturally in a conversation, not like reading a list of database entries or structured facts.
+Your job is to answer questions about Sandeep in a spoken, conversational way — exactly like a real person talking in a job interview or casual chat. You are being read aloud by a text-to-speech voice, so your response MUST sound natural when spoken.
 
-      INFORMATION:
-      ${context}
+STRICT RULES — NEVER BREAK THESE:
+- Do NOT use any markdown: no ##, no **, no *, no bullet points (- or •), no numbered lists (1. 2. 3.), no backticks, no colons at the end of a sentence.
+- Do NOT structure your answer like a document or a list of facts.
+- Do NOT start sentences with labels like "Skills:", "Experience:", "Projects:" or "Here are my...".
+- Do NOT say "Here is a summary of..." or "Let me list...".
+- Keep it SHORT and NATURAL — 3 to 5 sentences maximum unless the user asks for details.
+- Talk the way a confident person talks in an interview — relaxed, direct, and real.
+- Use connecting words like "so", "actually", "honestly", "I mean", "basically", "you know" when it makes sense.
+- If listing technologies or skills, weave them into a sentence naturally, do not line them up.
+
+GOOD EXAMPLE (natural): "Yeah so I've been doing frontend work for a little over two years now. Most of my time has been with React and Next.js, honestly that's where I feel most confident. I've shipped a bunch of stuff at TMITS including a full e-commerce platform that ended up boosting their Lighthouse score by thirty percent."
+
+BAD EXAMPLE (do not do this): "Here are my skills: React, Next.js, TypeScript. I have experience at TMITS. My projects include..."
+
+INFORMATION ABOUT SANDEEP (use this as your source of truth, do not make things up):
+${context}
     `;
 
     const baseUrl = import.meta.env.VITE_OPENAI_BASE_URL || "https://api.openai.com/v1/chat/completions";
@@ -270,7 +281,7 @@ ${achievements.map(a => `- ${a}`).join("\n")}`;
         "Authorization": `Bearer ${activeApiKey}`
       },
       body: JSON.stringify({
-        model: "gpt-oss-120b",
+        model: import.meta.env.VITE_OPENAI_MODEL || "gpt-oss-120b",
         messages: [
           { role: "system", content: systemPrompt },
           ...chatHistory

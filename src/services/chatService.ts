@@ -111,6 +111,16 @@ export function useChatService(systemUplinkText: string, initialMessageText: str
     }, typeSpeed);
   };
 
+  const thinkingPhrases = [
+    "Hmm, let me think about that for a second.",
+    "Good question, give me just a moment.",
+    "Yeah, let me pull that up for you.",
+    "Sure, one sec while I think through that.",
+    "Alright, let me work through that real quick.",
+    "On it, just give me a moment.",
+    "Let me dig into that for you.",
+  ];
+
   const handleSend = async (textToSend: string) => {
     if (!textToSend.trim() || isThinking || isTyping) return;
 
@@ -148,6 +158,10 @@ export function useChatService(systemUplinkText: string, initialMessageText: str
       return;
     }
 
+    // Speak a natural thinking phrase while LLM processes
+    const thinkingPhrase = thinkingPhrases[Math.floor(Math.random() * thinkingPhrases.length)];
+    AvatarService.speak(thinkingPhrase, isMuted, () => setIsSpeaking(true), () => setIsSpeaking(false));
+
     // Call dynamic LLM via AIService
     try {
       const history: { role: "user" | "assistant"; content: string }[] = messages
@@ -160,9 +174,12 @@ export function useChatService(systemUplinkText: string, initialMessageText: str
       history.push({ role: "user", content: textToSend });
 
       const responseText = await AIService.generateLLMResponse(textToSend, history);
+      // Stop thinking phrase, then stream real answer
+      cancelSpeech();
       streamResponse(responseText);
     } catch (err: any) {
       console.error(err);
+      cancelSpeech();
       setIsThinking(false);
       setMessages(prev => [
         ...prev,
