@@ -6,17 +6,244 @@ import * as THREE from "three";
 interface RobotHumanoidProps {
   isThinking: boolean;
   isTyping: boolean;
+  isListening?: boolean;
   isWaving?: boolean;
 }
 
-export function RobotHumanoid({ isThinking, isTyping, isWaving = false }: RobotHumanoidProps) {
+// ----------------------------------------------------
+// ROBOT FINGER COMPONENT
+// ----------------------------------------------------
+interface FingerProps {
+  offset: [number, number, number];
+  length: number;
+  thickness: number;
+  rotationZ?: number;
+  rotationX?: number;
+  materialBody: THREE.Material;
+  materialJoint: THREE.Material;
+}
+
+function RobotFinger({
+  offset,
+  length,
+  thickness,
+  rotationZ = 0,
+  rotationX = 0,
+  materialBody,
+  materialJoint,
+}: FingerProps) {
+  return (
+    <group position={offset} rotation={[rotationX, 0, rotationZ]}>
+      {/* Knuckle base */}
+      <mesh>
+        <sphereGeometry args={[thickness * 1.35, 12, 12]} />
+        <primitive object={materialJoint} attach="material" />
+      </mesh>
+      {/* Proximal segment */}
+      <mesh position={[0, -length * 0.35, 0]}>
+        <cylinderGeometry args={[thickness, thickness * 0.9, length * 0.7, 10]} />
+        <primitive object={materialBody} attach="material" />
+      </mesh>
+      {/* Mid joint */}
+      <group position={[0, -length * 0.7, 0]}>
+        <mesh>
+          <sphereGeometry args={[thickness * 1.15, 10, 10]} />
+          <primitive object={materialJoint} attach="material" />
+        </mesh>
+        {/* Distal segment */}
+        <mesh position={[0, -length * 0.25, 0]}>
+          <cylinderGeometry args={[thickness * 0.9, thickness * 0.7, length * 0.5, 10]} />
+          <primitive object={materialBody} attach="material" />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
+// ----------------------------------------------------
+// ROBOT HAND COMPONENT
+// ----------------------------------------------------
+interface RobotHandProps {
+  side: "left" | "right";
+  isWaving?: boolean;
+  materialBody: THREE.Material;
+  materialJoint: THREE.Material;
+}
+
+function RobotHand({ side, isWaving = false, materialBody, materialJoint }: RobotHandProps) {
+  const isLeft = side === "left";
+  const flip = isLeft ? 1 : -1;
+
+  // Wave pose rotation offset if waving
+  const handRotX = isWaving && !isLeft ? -0.2 : 0;
+  const handRotZ = isWaving && !isLeft ? 0.3 : 0;
+
+  return (
+    <group rotation={[handRotX, 0, handRotZ]}>
+      {/* Palm Plate */}
+      <mesh position={[0, -0.05, 0]}>
+        <boxGeometry args={[0.11, 0.08, 0.048]} />
+        <primitive object={materialBody} attach="material" />
+      </mesh>
+      {/* Backhand carbon cover */}
+      <mesh position={[0, -0.05, 0.026]}>
+        <boxGeometry args={[0.08, 0.06, 0.01]} />
+        <meshStandardMaterial color="#1e293b" roughness={0.35} metalness={0.8} />
+      </mesh>
+      {/* Fingers */}
+      <RobotFinger
+        offset={[-0.04 * flip, -0.09, 0.01]}
+        length={0.062}
+        thickness={0.011}
+        materialBody={materialBody}
+        materialJoint={materialJoint}
+      />
+      <RobotFinger
+        offset={[-0.013 * flip, -0.09, 0.013]}
+        length={0.072}
+        thickness={0.012}
+        materialBody={materialBody}
+        materialJoint={materialJoint}
+      />
+      <RobotFinger
+        offset={[0.013 * flip, -0.09, 0.013]}
+        length={0.068}
+        thickness={0.011}
+        materialBody={materialBody}
+        materialJoint={materialJoint}
+      />
+      <RobotFinger
+        offset={[0.04 * flip, -0.09, 0.009]}
+        length={0.058}
+        thickness={0.01}
+        materialBody={materialBody}
+        materialJoint={materialJoint}
+      />
+      {/* Thumb */}
+      <RobotFinger
+        offset={[-0.055 * flip, -0.035, -0.005]}
+        length={0.048}
+        thickness={0.012}
+        rotationZ={0.65 * flip}
+        rotationX={0.2}
+        materialBody={materialBody}
+        materialJoint={materialJoint}
+      />
+    </group>
+  );
+}
+
+// ----------------------------------------------------
+// REACTOR CORE COMPONENT
+// ----------------------------------------------------
+interface ReactorCoreProps {
+  isThinking: boolean;
+  isListening: boolean;
+  isTyping: boolean;
+  cogRef: React.RefObject<THREE.Group | null>;
+  materialJoint: THREE.Material;
+  materialGold: THREE.Material;
+}
+
+function ReactorCore({
+  isThinking,
+  isListening,
+  isTyping,
+  cogRef,
+  materialJoint,
+  materialGold,
+}: ReactorCoreProps) {
+  const glowColor = isThinking
+    ? "#10b981"
+    : isListening
+      ? "#f59e0b"
+      : isTyping
+        ? "#00f0ff"
+        : "#6366f1";
+
+  return (
+    <group position={[0, -0.08, 0.32]} rotation={[0.08, 0, 0]}>
+      {/* Outer Chamber Rim */}
+      <mesh>
+        <torusGeometry args={[0.165, 0.024, 16, 48]} />
+        <primitive object={materialGold} attach="material" />
+      </mesh>
+      {/* Core Backing Plate */}
+      <mesh position={[0, 0, -0.03]}>
+        <cylinderGeometry args={[0.15, 0.15, 0.02, 32]} />
+        <primitive object={materialJoint} attach="material" />
+      </mesh>
+      {/* Rotating Mechanical Cog */}
+      <group ref={cogRef} position={[0, 0, -0.01]}>
+        <mesh>
+          <cylinderGeometry args={[0.075, 0.075, 0.015, 12]} />
+          <primitive object={materialJoint} attach="material" />
+        </mesh>
+        {Array.from({ length: 8 }).map((_, i) => (
+          <mesh key={i} rotation={[0, 0, (i * Math.PI) / 4]}>
+            <boxGeometry args={[0.025, 0.11, 0.014]} />
+            <primitive object={materialJoint} attach="material" />
+          </mesh>
+        ))}
+      </group>
+      {/* Copper winding coils around the core */}
+      {Array.from({ length: 10 }).map((_, i) => {
+        const angle = (i * Math.PI) / 5;
+        const radius = 0.115;
+        return (
+          <group
+            key={i}
+            position={[Math.cos(angle) * radius, Math.sin(angle) * radius, -0.01]}
+            rotation={[0, 0, angle]}
+          >
+            <mesh>
+              <cylinderGeometry args={[0.014, 0.014, 0.038, 8]} />
+              <meshPhysicalMaterial color="#b45309" metalness={0.96} roughness={0.15} />
+            </mesh>
+          </group>
+        );
+      })}
+      {/* Glowing Inner Core Sphere */}
+      <mesh position={[0, 0, 0.01]}>
+        <sphereGeometry args={[0.046, 20, 20]} />
+        <meshBasicMaterial color={glowColor} />
+      </mesh>
+
+    </group>
+  );
+}
+
+// ----------------------------------------------------
+// MAIN ROBOTHUMANOID COMPONENT
+// ----------------------------------------------------
+export function RobotHumanoid({
+  isThinking,
+  isTyping,
+  isListening = false,
+  isWaving = false,
+}: RobotHumanoidProps) {
   const headRef = useRef<THREE.Group>(null);
   const leftShoulderRef = useRef<THREE.Group>(null);
   const rightShoulderRef = useRef<THREE.Group>(null);
   const robotRootRef = useRef<THREE.Group>(null);
   const shadowRef = useRef<THREE.Mesh>(null);
+  const visorMaterialRef = useRef<THREE.MeshStandardMaterial>(null);
 
-  // Dynamic canvas texture for the faceplate (bezel, screen, eyes, mouth)
+  // Mechanical spinal rings (vertebrae)
+  const spine1Ref = useRef<THREE.Mesh>(null);
+  const spine2Ref = useRef<THREE.Mesh>(null);
+  const spine3Ref = useRef<THREE.Mesh>(null);
+
+  // Hydraulic neck pistons
+  const leftPistonBaseRef = useRef<THREE.Group>(null);
+  const leftPistonShaftRef = useRef<THREE.Mesh>(null);
+  const rightPistonBaseRef = useRef<THREE.Group>(null);
+  const rightPistonShaftRef = useRef<THREE.Mesh>(null);
+
+  // Torso / Reactor Core Refs
+  const cogRef = useRef<THREE.Group>(null);
+
+  // Dynamic canvas texture for the faceplate
   const faceCanvas = useMemo(() => {
     const canvas = document.createElement("canvas");
     canvas.width = 1024;
@@ -30,155 +257,99 @@ export function RobotHumanoid({ isThinking, isTyping, isWaving = false }: RobotH
     return tex;
   }, [faceCanvas]);
 
-  // Safe round rectangle fallback for canvas
-  const drawRoundRect = (
-    ctx: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-    w: number,
-    h: number,
-    r: number
-  ) => {
-    if (typeof ctx.roundRect === "function") {
-      ctx.roundRect(x, y, w, h, r);
-    } else {
-      ctx.beginPath();
-      ctx.moveTo(x + r, y);
-      ctx.lineTo(x + w - r, y);
-      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-      ctx.lineTo(x + w, y + h - r);
-      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-      ctx.lineTo(x + r, y + h);
-      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-      ctx.lineTo(x, y + r);
-      ctx.quadraticCurveTo(x, y, x + r, y);
-      ctx.closePath();
-    }
-  };
-
-  const drawFace = (time: number, glowColor: string) => {
+  const drawFace = (time: number) => {
     const ctx = faceCanvas.getContext("2d");
     if (!ctx) return;
 
     ctx.clearRect(0, 0, 1024, 1024);
 
+    const grad = ctx.createRadialGradient(512, 512, 50, 512, 512, 600);
+    grad.addColorStop(0, "#081528");
+    grad.addColorStop(1, "#03070d");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 1024, 1024);
+
     ctx.save();
     ctx.translate(512, 512);
-    ctx.scale(0.55, 1.0);
+    ctx.scale(0.8, 1);
 
-    // 1. Draw Bezel
-    const bezelW = 1750;
-    const bezelH = 760;
-    const bezelX = -bezelW / 2;
-    const bezelY = -bezelH / 2;
-    const bezelR = 250;
-    const bezelGrad = ctx.createLinearGradient(bezelX, bezelY, bezelX + bezelW, bezelY + bezelH);
-    bezelGrad.addColorStop(0, "#ffffff");
-    bezelGrad.addColorStop(0.4, "#f1f5f9");
-    bezelGrad.addColorStop(0.8, "#cbd5e1");
-    bezelGrad.addColorStop(1, "#94a3b8");
-    ctx.fillStyle = bezelGrad;
-    ctx.beginPath();
-    drawRoundRect(ctx, bezelX, bezelY, bezelW, bezelH, bezelR);
-    ctx.fill();
-    ctx.strokeStyle = "#94a3b8";
-    ctx.lineWidth = 14;
-    ctx.beginPath();
-    drawRoundRect(ctx, bezelX, bezelY, bezelW, bezelH, bezelR);
-    ctx.stroke();
-
-    // 2. Draw Visor Screen
-    const screenW = 1600;
-    const screenH = 610;
-    const screenX = -screenW / 2;
-    const screenY = -screenH / 2;
-    const screenR = 190;
-    const screenGrad = ctx.createLinearGradient(0, screenY, 0, screenY + screenH);
-    screenGrad.addColorStop(0, "#090d16");
-    screenGrad.addColorStop(0.5, "#0d1527");
-    screenGrad.addColorStop(1, "#121b30");
-    ctx.fillStyle = screenGrad;
-    ctx.beginPath();
-    drawRoundRect(ctx, screenX, screenY, screenW, screenH, screenR);
-    ctx.fill();
-    ctx.strokeStyle = "#1a253c";
-    ctx.lineWidth = 8;
-    ctx.beginPath();
-    drawRoundRect(ctx, screenX, screenY, screenW, screenH, screenR);
-    ctx.stroke();
-
-    // 3. Draw Eyes and Mouth
-    ctx.fillStyle = glowColor;
-    ctx.shadowColor = glowColor;
+    const ledColor = isThinking ? "#00ff88" : isListening ? "#ffaa00" : isTyping ? "#00f3ff" : "#38bdf8";
+    ctx.fillStyle = ledColor;
+    ctx.strokeStyle = ledColor;
+    ctx.shadowColor = ledColor;
     ctx.shadowBlur = 40;
 
-    const cycleTime = time % 4.0;
-    const isBlinking = cycleTime > 3.85;
+    if (isListening) {
+      const R = 95;
+      ctx.beginPath();
+      ctx.arc(-175, -65, R + Math.sin(time * 8.0) * 6, 0, Math.PI * 2);
+      ctx.fill();
 
-    if (isThinking) {
-      // Thinking expression: narrow squinting eyes (thin horizontal bars) that pulse
-      const squintH = 22 + Math.sin(time * 2.0) * 6;
-      ctx.shadowBlur = 55;
-      ctx.strokeStyle = glowColor;
-      ctx.lineWidth = squintH;
-      ctx.lineCap = "round";
-      // Left eye squint
       ctx.beginPath();
-      ctx.moveTo(-410, -40);
-      ctx.lineTo(-230, -40);
-      ctx.stroke();
-      // Right eye squint
+      ctx.arc(175, -65, R + Math.sin(time * 8.0) * 6, 0, Math.PI * 2);
+      ctx.fill();
+
       ctx.beginPath();
-      ctx.moveTo(230, -40);
-      ctx.lineTo(410, -40);
-      ctx.stroke();
-      // Thinking mouth: small flat tight line (not smiling)
-      ctx.lineWidth = 28;
-      ctx.lineCap = "round";
+      ctx.arc(0, 95, 48 + Math.cos(time * 8.0) * 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#081528";
       ctx.beginPath();
-      ctx.moveTo(-90, 120);
-      ctx.lineTo(90, 120);
-      ctx.stroke();
-      // Thinking indicator: three small pulsing dots below mouth
-      const dotAlpha = 0.4 + 0.6 * Math.abs(Math.sin(time * 3.0));
-      ctx.globalAlpha = dotAlpha;
-      ctx.shadowBlur = 20;
-      [-80, 0, 80].forEach((dx, i) => {
-        const pulsed = 0.4 + 0.6 * Math.abs(Math.sin(time * 3.0 + i * 1.2));
-        ctx.globalAlpha = pulsed;
-        ctx.beginPath();
-        ctx.arc(dx, 185, 18, 0, Math.PI * 2);
-        ctx.fill();
-      });
-      ctx.globalAlpha = 1.0;
-    } else if (isBlinking) {
-      ctx.strokeStyle = glowColor;
+      ctx.arc(0, 95, (48 + Math.cos(time * 8.0) * 6) * 0.72, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (isThinking) {
+      const eyeScaleY = 0.15 + Math.abs(Math.sin(time * 4.5)) * 0.7;
+
+      ctx.save();
+      ctx.translate(-175, -65);
+      ctx.scale(1.0, eyeScaleY);
+      ctx.beginPath();
+      ctx.arc(0, 0, 105, Math.PI, 0, false);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      ctx.save();
+      ctx.translate(175, -65);
+      ctx.scale(1.0, eyeScaleY);
+      ctx.beginPath();
+      ctx.arc(0, 0, 105, Math.PI, 0, false);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
       ctx.lineWidth = 26;
       ctx.lineCap = "round";
+      ctx.strokeStyle = ledColor;
       ctx.beginPath();
-      ctx.moveTo(-410, -40);
-      ctx.lineTo(-230, -40);
-      ctx.moveTo(230, -40);
-      ctx.lineTo(410, -40);
+      const startX = -120;
+      const endX = 120;
+      ctx.moveTo(startX, 95);
+      for (let x = startX; x <= endX; x += 15) {
+        const y = 95 + Math.sin(time * 15.0 + (x - startX) * 0.08) * 20;
+        ctx.lineTo(x, y);
+      }
       ctx.stroke();
     } else {
-      // Normal happy arch eyes
+      const R = 115;
       ctx.beginPath();
-      ctx.ellipse(-320, -40, 110, 90, 0, Math.PI, 2 * Math.PI);
+      ctx.arc(-175, -65, R, Math.PI, 0, false);
+      ctx.closePath();
       ctx.fill();
-      ctx.beginPath();
-      ctx.ellipse(320, -40, 110, 90, 0, Math.PI, 2 * Math.PI);
-      ctx.fill();
-    }
 
-    if (!isThinking) {
-      // Normal smile mouth
-      const mouthScaleY = isTyping ? (0.4 + Math.abs(Math.sin(time * 15.0)) * 0.8) : 1.0;
-      ctx.save();
-      ctx.translate(0, 100);
-      ctx.scale(1.0, mouthScaleY);
       ctx.beginPath();
-      ctx.ellipse(0, 0, 120, 50, 0, 0, Math.PI);
+      ctx.arc(175, -65, R, Math.PI, 0, false);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.save();
+      ctx.translate(0, 75);
+      if (isTyping) {
+        const mouthOpen = 0.2 + Math.abs(Math.sin(time * 16.0)) * 0.95;
+        ctx.scale(1.0, mouthOpen);
+      }
+      ctx.beginPath();
+      ctx.arc(0, 0, 75, 0, Math.PI, false);
+      ctx.closePath();
       ctx.fill();
       ctx.restore();
     }
@@ -186,140 +357,195 @@ export function RobotHumanoid({ isThinking, isTyping, isWaving = false }: RobotH
     ctx.restore();
   };
 
-
-  // Helper to create horizontally bent plane geometry
-  const createBentPlaneGeometry = (w: number, h: number, cylinderR: number) => {
-    const geom = new THREE.PlaneGeometry(w, h, 32, 1);
+  const createRoundedBoxGeometry = (
+    width: number,
+    height: number,
+    depth: number,
+    radius: number,
+    segments: number
+  ) => {
+    const geom = new THREE.BoxGeometry(width, height, depth, segments, segments, segments);
     const posAttr = geom.attributes.position;
+    const temp = new THREE.Vector3();
     for (let i = 0; i < posAttr.count; i++) {
-      const vx = posAttr.getX(i);
-      const vz = posAttr.getZ(i);
+      temp.fromBufferAttribute(posAttr, i);
+      const sx = Math.sign(temp.x);
+      const sy = Math.sign(temp.y);
+      const sz = Math.sign(temp.z);
 
-      // Wrap around Y-axis cylinder
-      const angle = vx / cylinderR;
-      const newX = cylinderR * Math.sin(angle);
-      const newZ = vz + (cylinderR * Math.cos(angle) - cylinderR);
+      const innerX = temp.x - sx * radius;
+      const innerY = temp.y - sy * radius;
+      const innerZ = temp.z - sz * radius;
 
-      posAttr.setX(i, newX);
-      posAttr.setZ(i, newZ);
+      const dx = Math.abs(temp.x) > width / 2 - radius;
+      const dy = Math.abs(temp.y) > height / 2 - radius;
+      const dz = Math.abs(temp.z) > depth / 2 - radius;
+
+      if (dx && dy && dz) {
+        const vec = new THREE.Vector3(innerX, innerY, innerZ).normalize().multiplyScalar(radius);
+        posAttr.setXYZ(
+          i,
+          sx * (width / 2 - radius) + vec.x,
+          sy * (height / 2 - radius) + vec.y,
+          sz * (depth / 2 - radius) + vec.z
+        );
+      } else if (dx && dy) {
+        const vec = new THREE.Vector2(innerX, innerY).normalize().multiplyScalar(radius);
+        posAttr.setXYZ(i, sx * (width / 2 - radius) + vec.x, sy * (height / 2 - radius) + vec.y, temp.z);
+      } else if (dx && dz) {
+        const vec = new THREE.Vector2(innerX, innerZ).normalize().multiplyScalar(radius);
+        posAttr.setXYZ(i, sx * (width / 2 - radius) + vec.x, temp.y, sz * (depth / 2 - radius) + vec.y);
+      } else if (dy && dz) {
+        const vec = new THREE.Vector2(innerY, innerZ).normalize().multiplyScalar(radius);
+        posAttr.setXYZ(i, temp.x, sy * (height / 2 - radius) + vec.x, sz * (depth / 2 - radius) + vec.y);
+      }
     }
     geom.computeVertexNormals();
     return geom;
   };
 
-  // 3D curved plane geometry for face visor
-  const faceGeometry = useMemo(() => {
-    return createBentPlaneGeometry(0.72, 0.48, 0.382);
+  const headGeometry = useMemo(() => {
+    return createRoundedBoxGeometry(0.96, 0.82, 0.78, 0.22, 16);
   }, []);
 
-  // Smooth chubbier arms
-  const leftArmCurve = useMemo(() => {
-    return new THREE.QuadraticBezierCurve3(
-      new THREE.Vector3(0, 0.2, 0),
-      new THREE.Vector3(-0.06, -0.18, 0.2),
-      new THREE.Vector3(-0.03, -0.38, 0.01)
-    );
+  const visorGeometry = useMemo(() => {
+    return createRoundedBoxGeometry(0.76, 0.6, 0.00, 0.1, 16);
   }, []);
 
-  const rightArmCurve = useMemo(() => {
-    return new THREE.QuadraticBezierCurve3(
-      new THREE.Vector3(0, 0.2, 0),
-      new THREE.Vector3(0.06, -0.18, 0.2),
-      new THREE.Vector3(0.03, -0.38, 0.01)
-    );
-  }, []);
-
-  // Dynamic glow colors based on state
-  const glowColor = isThinking ? "#10b981" : isTyping ? "#00f0ff" : "#00d8ff";
-
-  // Throttle face canvas redraws to ~30fps (every other frame) to cut GC pressure
   const faceFrameSkip = useRef(0);
 
+  // ----------------------------------------------------
+  // USEFRAME ANIMATION LOOP
+  // ----------------------------------------------------
   useFrame((state) => {
     const time = state.clock.getElapsedTime();
-    const pointerX = state.pointer.x * 0.45;
-    const pointerY = state.pointer.y * 0.35;
+    const pointerX = state.pointer.x * 0.35;
+    const pointerY = state.pointer.y * 0.25;
 
-    // Redraw face canvas at ~30fps instead of 60fps
     faceFrameSkip.current = (faceFrameSkip.current + 1) % 2;
     if (faceFrameSkip.current === 0) {
-      drawFace(time, glowColor);
+      drawFace(time);
       faceTexture.needsUpdate = true;
     }
 
-    // 1. Idle breathing float
-    if (robotRootRef.current) {
-      robotRootRef.current.position.y = -0.12 + Math.sin(time * 1.3) * 0.04;
+    if (visorMaterialRef.current) {
+      visorMaterialRef.current.emissiveIntensity = isThinking
+        ? 1.5 + Math.sin(time * 8.0) * 0.45
+        : 1.5;
     }
 
-    // 2. Cursor tracking + head sway
+    // Spin Reactor Core Cog
+    if (cogRef.current) {
+      cogRef.current.rotation.z = time * 2.2;
+    }
+
+    // Breathing float
+    if (robotRootRef.current) {
+      robotRootRef.current.position.y = -0.15 + Math.sin(time * 1.3) * 0.035;
+    }
+
+    // Head tracking calculations
+    let targetRotY = pointerX;
+    let targetRotX = -pointerY + 0.05;
+    let targetRotZ = 0;
+
+    if (isWaving) {
+      targetRotY += Math.sin(time * 3.0) * 0.08;
+      targetRotZ = Math.sin(time * 2.5) * 0.05;
+    } else if (isThinking) {
+      targetRotZ = 0.05 + Math.sin(time * 2.0) * 0.02;
+      targetRotX += 0.02 + Math.cos(time * 1.5) * 0.03;
+    }
+
     if (headRef.current) {
-      let targetRotY = pointerX;
-      let targetRotX = -pointerY + 0.05;
-      let targetRotZ = 0;
-
-      if (isWaving) {
-        targetRotY += Math.sin(time * 3.0) * 0.08;
-        targetRotZ = Math.sin(time * 2.5) * 0.05;
-      } else if (isThinking) {
-        targetRotZ = 0.05 + Math.sin(time * 2.0) * 0.02;
-        targetRotX += 0.02 + Math.cos(time * 1.5) * 0.03;
-      } else if (isTyping) {
-        targetRotY += Math.sin(time * 5.0) * 0.03;
-        targetRotX += Math.cos(time * 6.5) * 0.02;
-      }
-
       headRef.current.rotation.y = THREE.MathUtils.lerp(headRef.current.rotation.y, targetRotY, 0.08);
       headRef.current.rotation.x = THREE.MathUtils.lerp(headRef.current.rotation.x, targetRotX, 0.08);
       headRef.current.rotation.z = THREE.MathUtils.lerp(headRef.current.rotation.z, targetRotZ, 0.08);
-    }
 
-    // 3. Arm animations
-    if (leftShoulderRef.current && rightShoulderRef.current) {
-      if (isWaving) {
-        // Raise right arm up and wave hand back and forth rapidly
-        const waveAngle = Math.sin(time * 10.0) * 0.35;
-        rightShoulderRef.current.rotation.z = THREE.MathUtils.lerp(rightShoulderRef.current.rotation.z, 1.35 + waveAngle, 0.1);
-        rightShoulderRef.current.rotation.x = THREE.MathUtils.lerp(rightShoulderRef.current.rotation.x, -0.4, 0.1);
-        rightShoulderRef.current.rotation.y = THREE.MathUtils.lerp(rightShoulderRef.current.rotation.y, -0.3, 0.1);
+      // Vertebrae organic bending
+      const curRotY = headRef.current.rotation.y;
+      const curRotX = headRef.current.rotation.x;
+      const curRotZ = headRef.current.rotation.z;
 
-        // Left arm idle sway
-        const armSway = Math.sin(time * 1.3) * 0.03;
-        leftShoulderRef.current.rotation.z = THREE.MathUtils.lerp(leftShoulderRef.current.rotation.z, -0.05 + armSway, 0.05);
-        leftShoulderRef.current.rotation.x = THREE.MathUtils.lerp(leftShoulderRef.current.rotation.x, armSway * 0.5, 0.05);
-        leftShoulderRef.current.rotation.y = THREE.MathUtils.lerp(leftShoulderRef.current.rotation.y, 0, 0.05);
-      } else if (isThinking) {
-        // Thinking pose: right arm raised to chin, left arm crosses torso
-        const thinkSway = Math.sin(time * 0.8) * 0.015;
-        rightShoulderRef.current.rotation.x = THREE.MathUtils.lerp(rightShoulderRef.current.rotation.x, -0.55 + thinkSway, 0.06);
-        rightShoulderRef.current.rotation.y = THREE.MathUtils.lerp(rightShoulderRef.current.rotation.y, -0.35, 0.06);
-        rightShoulderRef.current.rotation.z = THREE.MathUtils.lerp(rightShoulderRef.current.rotation.z, 0.65, 0.06);
-        leftShoulderRef.current.rotation.x = THREE.MathUtils.lerp(leftShoulderRef.current.rotation.x, -0.15, 0.06);
-        leftShoulderRef.current.rotation.y = THREE.MathUtils.lerp(leftShoulderRef.current.rotation.y, 0.35, 0.06);
-        leftShoulderRef.current.rotation.z = THREE.MathUtils.lerp(leftShoulderRef.current.rotation.z, -0.45 + thinkSway, 0.06);
-      } else if (isTyping) {
-        leftShoulderRef.current.rotation.x = THREE.MathUtils.lerp(leftShoulderRef.current.rotation.x, -0.25 + Math.sin(time * 6.0) * 0.15, 0.1);
-        leftShoulderRef.current.rotation.y = THREE.MathUtils.lerp(leftShoulderRef.current.rotation.y, 0.15 + Math.cos(time * 5.0) * 0.1, 0.1);
-        leftShoulderRef.current.rotation.z = THREE.MathUtils.lerp(leftShoulderRef.current.rotation.z, -0.15 + Math.sin(time * 4.0) * 0.08, 0.1);
-        rightShoulderRef.current.rotation.x = THREE.MathUtils.lerp(rightShoulderRef.current.rotation.x, -0.25 + Math.cos(time * 5.8) * 0.15, 0.1);
-        rightShoulderRef.current.rotation.y = THREE.MathUtils.lerp(rightShoulderRef.current.rotation.y, -0.15 - Math.sin(time * 4.8) * 0.1, 0.1);
-        rightShoulderRef.current.rotation.z = THREE.MathUtils.lerp(rightShoulderRef.current.rotation.z, 0.15 - Math.cos(time * 4.2) * 0.08, 0.1);
-      } else {
-        const armSway = Math.sin(time * 1.3) * 0.03;
-        leftShoulderRef.current.rotation.z = THREE.MathUtils.lerp(leftShoulderRef.current.rotation.z, -0.05 + armSway, 0.05);
-        leftShoulderRef.current.rotation.x = THREE.MathUtils.lerp(leftShoulderRef.current.rotation.x, armSway * 0.5, 0.05);
-        leftShoulderRef.current.rotation.y = THREE.MathUtils.lerp(leftShoulderRef.current.rotation.y, 0, 0.05);
-        rightShoulderRef.current.rotation.z = THREE.MathUtils.lerp(rightShoulderRef.current.rotation.z, 0.05 - armSway, 0.05);
-        rightShoulderRef.current.rotation.x = THREE.MathUtils.lerp(rightShoulderRef.current.rotation.x, armSway * 0.5, 0.05);
-        rightShoulderRef.current.rotation.y = THREE.MathUtils.lerp(rightShoulderRef.current.rotation.y, 0, 0.05);
+      if (spine1Ref.current) {
+        spine1Ref.current.rotation.y = curRotY * 0.25;
+        spine1Ref.current.rotation.x = curRotX * 0.25;
+        spine1Ref.current.rotation.z = curRotZ * 0.25;
+        spine1Ref.current.position.set(0.0, 0.22, 0);
+      }
+      if (spine2Ref.current) {
+        spine2Ref.current.rotation.y = curRotY * 0.55;
+        spine2Ref.current.rotation.x = curRotX * 0.55;
+        spine2Ref.current.rotation.z = curRotZ * 0.55;
+        spine2Ref.current.position.set(curRotY * 0.04, 0.29, -curRotX * 0.015);
+      }
+      if (spine3Ref.current) {
+        spine3Ref.current.rotation.y = curRotY * 0.8;
+        spine3Ref.current.rotation.x = curRotX * 0.8;
+        spine3Ref.current.rotation.z = curRotZ * 0.8;
+        spine3Ref.current.position.set(curRotY * 0.08, 0.36, -curRotX * 0.03);
+      }
+
+      // Hydraulic Neck Pistons dynamic aiming
+      const headPos = new THREE.Vector3(0, 0.48, 0);
+      const headEuler = new THREE.Euler(curRotX, curRotY, curRotZ, "YXZ");
+
+      if (leftPistonBaseRef.current && leftPistonShaftRef.current) {
+        const leftTargetLocal = new THREE.Vector3(-0.16, -0.09, -0.06);
+        leftTargetLocal.applyEuler(headEuler);
+        const targetWorld = headPos.clone().add(leftTargetLocal);
+        const baseWorld = new THREE.Vector3(-0.13, 0.17, -0.08);
+
+        const dir = new THREE.Vector3().subVectors(targetWorld, baseWorld);
+        const len = dir.length();
+
+        leftPistonBaseRef.current.position.copy(baseWorld);
+        leftPistonBaseRef.current.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
+        leftPistonShaftRef.current.position.y = len * 0.45;
+      }
+
+      if (rightPistonBaseRef.current && rightPistonShaftRef.current) {
+        const rightTargetLocal = new THREE.Vector3(0.16, -0.09, -0.06);
+        rightTargetLocal.applyEuler(headEuler);
+        const targetWorld = headPos.clone().add(rightTargetLocal);
+        const baseWorld = new THREE.Vector3(0.13, 0.17, -0.08);
+
+        const dir = new THREE.Vector3().subVectors(targetWorld, baseWorld);
+        const len = dir.length();
+
+        rightPistonBaseRef.current.position.copy(baseWorld);
+        rightPistonBaseRef.current.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
+        rightPistonShaftRef.current.position.y = len * 0.45;
       }
     }
 
-    // 4. Dynamic Shadow animation (scale & opacity)
+    // Arm micro-animations (Breathing + Wave state)
+    if (leftShoulderRef.current && rightShoulderRef.current) {
+      const breathingAngle = Math.sin(time * 1.3) * 0.02;
+
+      let targetLeftRotX = -0.05 + breathingAngle;
+      let targetLeftRotZ = Math.PI / 16;
+      let targetRightRotX = 0.05 + breathingAngle;
+      let targetRightRotZ = -Math.PI / 16;
+
+      if (isWaving) {
+        // Raise right shoulder for waving
+        targetRightRotX = -Math.PI / 2.2 + Math.sin(time * 8.0) * 0.1;
+        targetRightRotZ = -Math.PI / 3 + Math.cos(time * 8.5) * 0.15;
+      }
+
+      leftShoulderRef.current.rotation.x = THREE.MathUtils.lerp(leftShoulderRef.current.rotation.x, targetLeftRotX, 0.08);
+      leftShoulderRef.current.rotation.z = THREE.MathUtils.lerp(leftShoulderRef.current.rotation.z, targetLeftRotZ, 0.08);
+
+      rightShoulderRef.current.rotation.x = THREE.MathUtils.lerp(rightShoulderRef.current.rotation.x, targetRightRotX, 0.08);
+      rightShoulderRef.current.rotation.z = THREE.MathUtils.lerp(rightShoulderRef.current.rotation.z, targetRightRotZ, 0.08);
+    }
+
+    // Dynamic ground shadow
     if (shadowRef.current) {
       const heightOffset = Math.sin(time * 1.3);
       const shadowScale = 1.0 + heightOffset * 0.08;
-      const shadowOpacity = 0.15 - heightOffset * 0.04;
+      const shadowOpacity = 0.14 - heightOffset * 0.03;
       shadowRef.current.scale.set(shadowScale, shadowScale, 1);
       if (shadowRef.current.material) {
         (shadowRef.current.material as THREE.MeshBasicMaterial).opacity = shadowOpacity;
@@ -327,233 +553,513 @@ export function RobotHumanoid({ isThinking, isTyping, isWaving = false }: RobotH
     }
   });
 
-  const matClayBody = useMemo(() => new THREE.MeshStandardMaterial({
-    color: "#f1f5f9",
-    roughness: 0.4,
-    metalness: 0.06,
-  }), []);
+  // ----------------------------------------------------
+  // HIGH-QUALITY PHYSICAL SHADERS & MATERIALS
+  // ----------------------------------------------------
+  const matWhiteBody = useMemo(
+    () =>
+      new THREE.MeshPhysicalMaterial({
+        color: "#f8fafc",
+        roughness: 0.12,
+        metalness: 0.05,
+        clearcoat: 1.0,
+        clearcoatRoughness: 0.1,
+      }),
+    []
+  );
 
-  const matGraphiteJoint = useMemo(() => new THREE.MeshStandardMaterial({
-    color: "#475569",
-    roughness: 0.35,
-    metalness: 0.6,
-  }), []);
+  const matGraphiteJoint = useMemo(
+    () =>
+      new THREE.MeshPhysicalMaterial({
+        color: "#27272a",
+        roughness: 0.22,
+        metalness: 0.9,
+        clearcoat: 0.3,
+      }),
+    []
+  );
 
-  // Dynamic canvas texture for the body (seam line, neck socket)
-  const bodyCanvas = useMemo(() => {
-    const canvas = document.createElement("canvas");
-    canvas.width = 1024;
-    canvas.height = 1024;
-    return canvas;
-  }, []);
+  const matGoldAccent = useMemo(
+    () =>
+      new THREE.MeshPhysicalMaterial({
+        color: "#d97706",
+        roughness: 0.16,
+        metalness: 0.96,
+        clearcoat: 0.8,
+      }),
+    []
+  );
 
   const bodyTexture = useMemo(() => {
-    const ctx = bodyCanvas.getContext("2d");
+    const canvas = document.createElement("canvas");
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext("2d");
     if (ctx) {
-      // Fill background with white for clay body color mapping
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, 1024, 1024);
+      const grad = ctx.createLinearGradient(0, 0, 0, 512);
+      grad.addColorStop(0, "#ffffff");
+      grad.addColorStop(0.5, "#f1f5f9");
+      grad.addColorStop(1, "#cbd5e1");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 512, 512);
 
-      // 1. Draw top neck socket (circular cap)
-      ctx.fillStyle = "#334155";
-      ctx.fillRect(0, 0, 1024, 110);
-
-      // Rim shadow/border
-      ctx.strokeStyle = "#1e293b";
-      ctx.lineWidth = 10;
-      ctx.beginPath();
-      ctx.moveTo(0, 110);
-      ctx.lineTo(1024, 110);
-      ctx.stroke();
-
-      // 2. Draw Seam Line (medium grey groove with a step-down notch in the front center)
-      ctx.strokeStyle = "#64748b";
-      ctx.lineWidth = 14;
+      ctx.strokeStyle = "#3f3f46";
+      ctx.lineWidth = 5;
       ctx.lineCap = "round";
-      ctx.lineJoin = "round";
 
-      const seamY = 620;
-      const notchDepth = 40;
-      const notchHalfW = 60; // width of notch is 120 pixels
-
+      // Grooves & seam line detailing on body panel
       ctx.beginPath();
-      ctx.moveTo(0, seamY);
-      ctx.lineTo(512 - notchHalfW, seamY);
-      ctx.lineTo(512 - notchHalfW, seamY + notchDepth);
-      ctx.lineTo(512 + notchHalfW, seamY + notchDepth);
-      ctx.lineTo(512 + notchHalfW, seamY);
-      ctx.lineTo(1024, seamY);
+      ctx.moveTo(0, 270);
+      ctx.lineTo(220, 270);
+      ctx.lineTo(220, 285);
+      ctx.lineTo(292, 285);
+      ctx.lineTo(292, 270);
+      ctx.lineTo(512, 270);
       ctx.stroke();
     }
-
-    const tex = new THREE.CanvasTexture(bodyCanvas);
+    const tex = new THREE.CanvasTexture(canvas);
     tex.colorSpace = THREE.SRGBColorSpace;
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.offset.x = -0.25;
     return tex;
-  }, [bodyCanvas]);
-
-  const matTorsoBody = useMemo(() => new THREE.MeshStandardMaterial({
-    color: "#f1f5f9",
-    map: bodyTexture,
-    roughness: 0.4,
-    metalness: 0.06,
-  }), [bodyTexture]);
-
-  // Custom tapered torso geometry (inverted rounded triangle / teardrop shape)
-  const bodyGeometry = useMemo(() => {
-    const geom = new THREE.SphereGeometry(0.34, 32, 32);
-    const posAttr = geom.attributes.position;
-    for (let i = 0; i < posAttr.count; i++) {
-      const y = posAttr.getY(i);
-      // Normalize y from -0.34 to 0.34 to range [0, 1] and clamp to avoid negative values from float precision at poles
-      const normY = Math.max(0, Math.min(1, (y + 0.34) / 0.68));
-      // Taper factor: 0.3 at the bottom, 1.25 at the top, convex curve
-      const factor = 0.3 + 0.95 * Math.pow(normY, 0.75);
-      posAttr.setX(i, posAttr.getX(i) * factor);
-      posAttr.setZ(i, posAttr.getZ(i) * factor);
-    }
-    geom.computeVertexNormals();
-    return geom;
   }, []);
 
+  const matTorsoBody = useMemo(
+    () =>
+      new THREE.MeshPhysicalMaterial({
+        color: "#ffffff",
+        roughness: 0.12,
+        metalness: 0.05,
+        clearcoat: 1.0,
+        clearcoatRoughness: 0.1,
+        map: bodyTexture,
+        side: THREE.DoubleSide,
+      }),
+    [bodyTexture]
+  );
+
+  const torsoGeometry = useMemo(() => {
+    const curve = new THREE.CubicBezierCurve(
+      new THREE.Vector2(0.01, 0.38),
+      new THREE.Vector2(0.58, 0.3),
+      new THREE.Vector2(0.44, -0.44),
+      new THREE.Vector2(0.01, -0.54)
+    );
+    const points = curve.getPoints(32);
+    return new THREE.LatheGeometry(points, 64);
+  }, []);
+
+  const leftArmGeometry = useMemo(() => {
+    const path = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(-0.12, -0.16, 0.06),
+      new THREE.Vector3(-0.21, -0.32, 0.1)
+    ]);
+    return new THREE.TubeGeometry(path, 24, 0.078, 16, false);
+  }, []);
+
+  const rightArmGeometry = useMemo(() => {
+    const path = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(0.12, -0.16, 0.06),
+      new THREE.Vector3(0.21, -0.32, 0.1)
+    ]);
+    return new THREE.TubeGeometry(path, 24, 0.078, 16, false);
+  }, []);
+
+  const earGlowColor = isThinking ? "#00ff88" : isListening ? "#ffaa00" : isTyping ? "#00f3ff" : "#38bdf8";
+
   return (
-    <group position={[0, 0.05, 0]} scale={[1.2, 1.2, 1.2]}>
-      {/* Dynamic Drop Shadow (ground shadow) */}
-      <mesh
-        ref={shadowRef}
-        position={[0, -1.02, 0]}
-        rotation={[-Math.PI / 2, 0, 0]}
-      >
-        <circleGeometry args={[0.26, 32]} />
-        <meshBasicMaterial color="#000000" transparent opacity={0.15} depthWrite={false} />
+    <group position={[0, 0.02, 0]} scale={[1.42, 1.42, 1.42]}>
+      {/* Drop Ground Shadow */}
+      <mesh ref={shadowRef} position={[0, -1.58, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[0.38, 32]} />
+        <meshBasicMaterial color="#000000" transparent opacity={0.14} depthWrite={false} />
       </mesh>
 
-      {/* Floating Robot Body */}
+      {/* Main Robot Structure */}
       <group ref={robotRootRef}>
-        {/* --- NECK --- */}
-        <mesh position={[0, 0.16, 0]}>
-          <cylinderGeometry args={[0.07, 0.08, 0.10, 16]} />
-          <primitive object={matGraphiteJoint} attach="material" />
-        </mesh>
 
-        {/* --- HEAD GROUP --- */}
-        <group ref={headRef} position={[0, 0.43, 0]}>
-          {/* Head armor sphere shell */}
-          <mesh scale={[1.15, 0.95, 1.0]}>
-            <sphereGeometry args={[0.38, 32, 32]} />
-            <primitive object={matClayBody} attach="material" />
+        {/* --- MECHANICAL COLLAR BASE --- */}
+        <group position={[0, 0.11, 0]}>
+          <mesh>
+            <cylinderGeometry args={[0.16, 0.19, 0.05, 24]} />
+            <primitive object={matGraphiteJoint} attach="material" />
+          </mesh>
+          <mesh position={[0, 0.026, 0]}>
+            <torusGeometry args={[0.17, 0.012, 12, 32]} />
+            <primitive object={matGoldAccent} attach="material" />
+          </mesh>
+        </group>
+
+        {/* --- DETAILED SEGMENTED VERTEBRAE SPINE --- */}
+        <group>
+          <mesh ref={spine1Ref}>
+            <cylinderGeometry args={[0.07, 0.075, 0.04, 16]} />
+            <primitive object={matGraphiteJoint} attach="material" />
+          </mesh>
+          <mesh ref={spine2Ref}>
+            <cylinderGeometry args={[0.065, 0.07, 0.04, 16]} />
+            <primitive object={matGraphiteJoint} attach="material" />
+          </mesh>
+          <mesh ref={spine3Ref}>
+            <cylinderGeometry args={[0.06, 0.065, 0.04, 16]} />
+            <primitive object={matGraphiteJoint} attach="material" />
+          </mesh>
+        </group>
+
+        {/* --- DYNAMIC HYDRAULIC NECK PISTONS --- */}
+        <group ref={leftPistonBaseRef}>
+          <mesh>
+            <cylinderGeometry args={[0.02, 0.02, 0.14, 8]} />
+            <primitive object={matGraphiteJoint} attach="material" />
+          </mesh>
+          <mesh ref={leftPistonShaftRef} position={[0, 0, 0]}>
+            <cylinderGeometry args={[0.011, 0.011, 0.14, 8]} />
+            <meshPhysicalMaterial color="#94a3b8" metalness={0.96} roughness={0.1} />
+          </mesh>
+        </group>
+
+        <group ref={rightPistonBaseRef}>
+          <mesh>
+            <cylinderGeometry args={[0.02, 0.02, 0.14, 8]} />
+            <primitive object={matGraphiteJoint} attach="material" />
+          </mesh>
+          <mesh ref={rightPistonShaftRef} position={[0, 0, 0]}>
+            <cylinderGeometry args={[0.011, 0.011, 0.14, 8]} />
+            <meshPhysicalMaterial color="#94a3b8" metalness={0.96} roughness={0.1} />
+          </mesh>
+        </group>
+
+        {/* --- HEAD COMPONENT (Double Visor Structure) --- */}
+        <group ref={headRef} position={[0, 0.48, 0]}>
+
+          {/* Main White Glossy Head Shell */}
+          <mesh>
+            <primitive object={headGeometry} attach="geometry" />
+            <primitive object={matWhiteBody} attach="material" />
           </mesh>
 
-          {/* Integrated 3D Curved Visor Faceplate (Bezel, Screen, Eyes, Mouth in one wrapped texture) */}
-          <mesh position={[0, 0, 0.382]} scale={[1.15, 0.95, 1.0]}>
-            <primitive object={faceGeometry} attach="geometry" />
-            <meshBasicMaterial
+          {/* VISOR LAYER 1: Deep Inset Digital Faceplate Screen */}
+          <mesh position={[0, 0, 0.391]}>
+            <primitive object={visorGeometry} attach="geometry" />
+            <meshStandardMaterial
+              ref={visorMaterialRef}
+              color="#0f172a"
+              roughness={0.12}
+              metalness={0.9}
               map={faceTexture}
-              transparent={true}
-              depthWrite={true}
+              emissive="#ffffff"
+              emissiveMap={faceTexture}
+              emissiveIntensity={1.5}
             />
           </mesh>
 
-          {/* --- LEFT EAR CUP --- */}
-          <group position={[-0.38, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-            <mesh position={[0, 0.02, 0]}>
-              <cylinderGeometry args={[0.04, 0.04, 0.06, 16]} />
+          {/* Forehead Camera Sensor Lens (Aesthetics detail) */}
+          <group position={[0, 0.31, 0.33]} rotation={[0.4, 0, 0]}>
+            <mesh>
+              <cylinderGeometry args={[0.04, 0.04, 0.03, 16]} />
               <primitive object={matGraphiteJoint} attach="material" />
             </mesh>
-            <mesh position={[0, -0.02, 0]}>
-              <cylinderGeometry args={[0.115, 0.115, 0.08, 16]} />
-              <primitive object={matClayBody} attach="material" />
+            <mesh position={[0, 0.016, 0]}>
+              <cylinderGeometry args={[0.028, 0.028, 0.01, 16]} />
+              <primitive object={matGoldAccent} attach="material" />
             </mesh>
-            <mesh position={[0, -0.06, 0]} rotation={[Math.PI, 0, 0]}>
-              <sphereGeometry args={[0.115, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
-              <primitive object={matClayBody} attach="material" />
+            <mesh position={[0, 0.021, 0]}>
+              <sphereGeometry args={[0.015, 12, 12]} />
+              <meshBasicMaterial color="#38bdf8" />
             </mesh>
           </group>
 
-          {/* --- RIGHT EAR CUP --- */}
-          <group position={[0.38, 0, 0]} rotation={[0, 0, -Math.PI / 2]}>
+          {/* --- TOP SENSOR ANTENNA ARRAY --- */}
+          <group position={[0, 0.41, 0]}>
             <mesh position={[0, 0.02, 0]}>
-              <cylinderGeometry args={[0.04, 0.04, 0.06, 16]} />
+              <cylinderGeometry args={[0.08, 0.11, 0.05, 20]} />
               <primitive object={matGraphiteJoint} attach="material" />
             </mesh>
-            <mesh position={[0, -0.02, 0]}>
-              <cylinderGeometry args={[0.115, 0.115, 0.08, 16]} />
-              <primitive object={matClayBody} attach="material" />
+            <mesh position={[0, 0.06, 0]}>
+              <cylinderGeometry args={[0.015, 0.015, 0.08, 8]} />
+              <primitive object={matGoldAccent} attach="material" />
             </mesh>
-            <mesh position={[0, -0.06, 0]} rotation={[Math.PI, 0, 0]}>
-              <sphereGeometry args={[0.115, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
-              <primitive object={matClayBody} attach="material" />
+            <mesh position={[0, 0.1, 0]}>
+              <sphereGeometry args={[0.025, 12, 12]} />
+              <meshBasicMaterial color={earGlowColor} />
+            </mesh>
+          </group>
+
+          {/* --- LEFT EAR CUP WITH LED GLOW RING --- */}
+          <group position={[-0.49, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+            <mesh>
+              <cylinderGeometry args={[0.13, 0.13, 0.06, 24]} />
+              <primitive object={matWhiteBody} attach="material" />
+            </mesh>
+            <mesh position={[0, 0.02, 0]}>
+              <cylinderGeometry args={[0.08, 0.08, 0.04, 24]} />
+              <primitive object={matGraphiteJoint} attach="material" />
+            </mesh>
+            {/* LED Status Ring */}
+            <mesh position={[0, 0.041, 0]} rotation={[Math.PI / 2, 0, 0]}>
+              <torusGeometry args={[0.055, 0.007, 8, 24]} />
+              <meshBasicMaterial color={earGlowColor} />
+            </mesh>
+          </group>
+
+          {/* --- RIGHT EAR CUP WITH LED GLOW RING --- */}
+          <group position={[0.49, 0, 0]} rotation={[0, 0, -Math.PI / 2]}>
+            <mesh>
+              <cylinderGeometry args={[0.13, 0.13, 0.06, 24]} />
+              <primitive object={matWhiteBody} attach="material" />
+            </mesh>
+            <mesh position={[0, 0.02, 0]}>
+              <cylinderGeometry args={[0.08, 0.08, 0.04, 24]} />
+              <primitive object={matGraphiteJoint} attach="material" />
+            </mesh>
+            {/* LED Status Ring */}
+            <mesh position={[0, 0.041, 0]} rotation={[Math.PI / 2, 0, 0]}>
+              <torusGeometry args={[0.055, 0.007, 8, 24]} />
+              <meshBasicMaterial color={earGlowColor} />
             </mesh>
           </group>
         </group>
 
-        {/* --- TORSO / BODY --- */}
-        <group position={[0, -0.20, 0]}>
-          {/* Capsule-like Main Body */}
-          <mesh scale={[1.0, 1.15, 0.95]} rotation={[0, Math.PI, 0]}>
-            <primitive object={bodyGeometry} attach="geometry" />
+        {/* --- TORSO & CHEST REACTOR CORE --- */}
+        <group position={[0, -0.22, 0]}>
+          {/* Torso Outer Lathe Geometry */}
+          <mesh>
+            <primitive object={torsoGeometry} attach="geometry" />
             <primitive object={matTorsoBody} attach="material" />
           </mesh>
+
+          {/* Recessed Reactor Core Assembly */}
+          <ReactorCore
+            isThinking={isThinking}
+            isListening={isListening}
+            isTyping={isTyping}
+            cogRef={cogRef}
+            materialJoint={matGraphiteJoint}
+            materialGold={matGoldAccent}
+          />
         </group>
 
-        {/* --- LEFT ARM --- */}
-        <group ref={leftShoulderRef} position={[-0.27, -0.15, 0]}>
-          <mesh position={[0.02, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-            <cylinderGeometry args={[0.025, 0.025, 0.04, 12]} />
+        {/* --- DETAILED MECHANICAL RIGHT LEG --- */}
+        <group>
+          {/* Hip socket */}
+          <mesh position={[0.16, -0.54, 0]}>
+            <sphereGeometry args={[0.1, 16, 16]} />
             <primitive object={matGraphiteJoint} attach="material" />
           </mesh>
-          <group>
+          {/* Thigh Casing with decorative gold ring */}
+          <group position={[0.16, -0.72, 0.02]} rotation={[0.08, 0, 0]}>
             <mesh>
-              <tubeGeometry args={[leftArmCurve, 16, 0.085, 12, false]} />
-              <primitive object={matClayBody} attach="material" />
+              <capsuleGeometry args={[0.095, 0.22, 8, 16]} />
+              <primitive object={matWhiteBody} attach="material" />
             </mesh>
-            <mesh position={[0, 0, 0]}>
-              <sphereGeometry args={[0.085, 12, 12]} />
-              <primitive object={matClayBody} attach="material" />
+            {/* Hydraulic damper shock strut */}
+            <mesh position={[0.07, 0, -0.02]} rotation={[-0.1, 0, 0]}>
+              <cylinderGeometry args={[0.015, 0.015, 0.24, 8]} />
+              <meshPhysicalMaterial color="#94a3b8" metalness={0.9} roughness={0.1} />
             </mesh>
-            <mesh position={[-0.03, -0.38, 0.01]}>
-              <sphereGeometry args={[0.085, 12, 12]} />
-              <primitive object={matClayBody} attach="material" />
+          </group>
+          {/* Knee hinge mechanism */}
+          <group position={[0.16, -0.9, 0.04]}>
+            <mesh>
+              <sphereGeometry args={[0.09, 16, 16]} />
+              <primitive object={matGraphiteJoint} attach="material" />
+            </mesh>
+            <mesh position={[0.04, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
+              <cylinderGeometry args={[0.065, 0.065, 0.03, 16]} />
+              <primitive object={matGoldAccent} attach="material" />
+            </mesh>
+          </group>
+          {/* Calf Casing */}
+          <group position={[0.16, -1.1, 0.02]} rotation={[-0.08, 0, 0]}>
+            <mesh>
+              <capsuleGeometry args={[0.085, 0.22, 8, 16]} />
+              <primitive object={matWhiteBody} attach="material" />
+            </mesh>
+          </group>
+          {/* Joint Ankle & Foot */}
+          <group position={[0.16, -1.27, 0.06]} rotation={[0.05, 0, 0]}>
+            <mesh>
+              <sphereGeometry args={[0.055, 12, 12]} />
+              <primitive object={matGraphiteJoint} attach="material" />
+            </mesh>
+            {/* Foot Body */}
+            <mesh position={[0, -0.04, 0.04]}>
+              <boxGeometry args={[0.16, 0.05, 0.22]} />
+              <primitive object={matWhiteBody} attach="material" />
+            </mesh>
+            {/* Twin Toes cylinders */}
+            <mesh position={[-0.045, -0.04, 0.16]} rotation={[Math.PI / 2, 0, 0]}>
+              <cylinderGeometry args={[0.025, 0.025, 0.06, 12]} />
+              <primitive object={matGraphiteJoint} attach="material" />
+            </mesh>
+            <mesh position={[0.045, -0.04, 0.16]} rotation={[Math.PI / 2, 0, 0]}>
+              <cylinderGeometry args={[0.025, 0.025, 0.06, 12]} />
+              <primitive object={matGraphiteJoint} attach="material" />
             </mesh>
           </group>
         </group>
 
-        {/* --- RIGHT ARM --- */}
-        <group ref={rightShoulderRef} position={[0.27, -0.15, 0]}>
-          <mesh position={[-0.02, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-            <cylinderGeometry args={[0.025, 0.025, 0.04, 12]} />
+        {/* --- DETAILED MECHANICAL LEFT LEG --- */}
+        <group>
+          {/* Hip socket */}
+          <mesh position={[-0.16, -0.54, 0]}>
+            <sphereGeometry args={[0.1, 16, 16]} />
             <primitive object={matGraphiteJoint} attach="material" />
           </mesh>
-          <group>
+          {/* Thigh Casing */}
+          <group position={[-0.16, -0.72, 0.02]} rotation={[0.08, 0, 0]}>
             <mesh>
-              <tubeGeometry args={[rightArmCurve, 16, 0.085, 12, false]} />
-              <primitive object={matClayBody} attach="material" />
+              <capsuleGeometry args={[0.095, 0.22, 8, 16]} />
+              <primitive object={matWhiteBody} attach="material" />
             </mesh>
-            <mesh position={[0, 0, 0]}>
-              <sphereGeometry args={[0.085, 12, 12]} />
-              <primitive object={matClayBody} attach="material" />
+            {/* Hydraulic damper strut */}
+            <mesh position={[-0.07, 0, -0.02]} rotation={[-0.1, 0, 0]}>
+              <cylinderGeometry args={[0.015, 0.015, 0.24, 8]} />
+              <meshPhysicalMaterial color="#94a3b8" metalness={0.9} roughness={0.1} />
             </mesh>
-            <mesh position={[0.03, -0.38, 0.01]}>
-              <sphereGeometry args={[0.085, 12, 12]} />
-              <primitive object={matClayBody} attach="material" />
+          </group>
+          {/* Knee joint */}
+          <group position={[-0.16, -0.9, 0.04]}>
+            <mesh>
+              <sphereGeometry args={[0.09, 16, 16]} />
+              <primitive object={matGraphiteJoint} attach="material" />
+            </mesh>
+            <mesh position={[-0.04, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
+              <cylinderGeometry args={[0.065, 0.065, 0.03, 16]} />
+              <primitive object={matGoldAccent} attach="material" />
+            </mesh>
+          </group>
+          {/* Calf Casing */}
+          <group position={[-0.16, -1.1, 0.02]} rotation={[-0.08, 0, 0]}>
+            <mesh>
+              <capsuleGeometry args={[0.085, 0.22, 8, 16]} />
+              <primitive object={matWhiteBody} attach="material" />
+            </mesh>
+          </group>
+          {/* Ankle & Foot */}
+          <group position={[-0.16, -1.27, 0.06]} rotation={[0.05, 0, 0]}>
+            <mesh>
+              <sphereGeometry args={[0.055, 12, 12]} />
+              <primitive object={matGraphiteJoint} attach="material" />
+            </mesh>
+            {/* Foot body */}
+            <mesh position={[0, -0.04, 0.04]}>
+              <boxGeometry args={[0.16, 0.05, 0.22]} />
+              <primitive object={matWhiteBody} attach="material" />
+            </mesh>
+            {/* Toes */}
+            <mesh position={[-0.045, -0.04, 0.16]} rotation={[Math.PI / 2, 0, 0]}>
+              <cylinderGeometry args={[0.025, 0.025, 0.06, 12]} />
+              <primitive object={matGraphiteJoint} attach="material" />
+            </mesh>
+            <mesh position={[0.045, -0.04, 0.16]} rotation={[Math.PI / 2, 0, 0]}>
+              <cylinderGeometry args={[0.025, 0.025, 0.06, 12]} />
+              <primitive object={matGraphiteJoint} attach="material" />
             </mesh>
           </group>
         </group>
+
+        {/* --- DETAILED MECHANICAL RIGHT ARM (WAVING ACTION TARGET) --- */}
+        <group ref={rightShoulderRef} position={[0.38, -0.12, -0.06]} rotation={[0, 0, -Math.PI / 16]}>
+          {/* Shoulder Cap */}
+          <mesh>
+            <sphereGeometry args={[0.085, 16, 16]} />
+            <primitive object={matWhiteBody} attach="material" />
+          </mesh>
+          {/* Arm Core Joint */}
+          <mesh position={[0, -0.02, 0]}>
+            <sphereGeometry args={[0.055, 12, 12]} />
+            <primitive object={matGraphiteJoint} attach="material" />
+          </mesh>
+          {/* Bicep Tube */}
+          <mesh>
+            <primitive object={rightArmGeometry} attach="geometry" />
+            <primitive object={matWhiteBody} attach="material" />
+          </mesh>
+          {/* Elbow Joint Shield */}
+          <group position={[0.21, -0.32, 0.1]}>
+            <mesh>
+              <sphereGeometry args={[0.065, 12, 12]} />
+              <primitive object={matGraphiteJoint} attach="material" />
+            </mesh>
+            <mesh rotation={[0, Math.PI / 2, 0]} position={[0, 0, 0]}>
+              <cylinderGeometry args={[0.048, 0.048, 0.025, 12]} />
+              <primitive object={matGoldAccent} attach="material" />
+            </mesh>
+            {/* Articulated Hand */}
+            <group position={[0.04, -0.12, 0.05]} rotation={[0.1, 0.05, 0.1]}>
+              <RobotHand
+                side="right"
+                isWaving={isWaving}
+                materialBody={matWhiteBody}
+                materialJoint={matGraphiteJoint}
+              />
+            </group>
+          </group>
+        </group>
+
+        {/* --- DETAILED MECHANICAL LEFT ARM --- */}
+        <group ref={leftShoulderRef} position={[-0.38, -0.12, -0.06]} rotation={[0, 0, Math.PI / 16]}>
+          {/* Shoulder Cap */}
+          <mesh>
+            <sphereGeometry args={[0.085, 16, 16]} />
+            <primitive object={matWhiteBody} attach="material" />
+          </mesh>
+          {/* Arm Core Joint */}
+          <mesh position={[0, -0.02, 0]}>
+            <sphereGeometry args={[0.055, 12, 12]} />
+            <primitive object={matGraphiteJoint} attach="material" />
+          </mesh>
+          {/* Bicep Tube */}
+          <mesh>
+            <primitive object={leftArmGeometry} attach="geometry" />
+            <primitive object={matWhiteBody} attach="material" />
+          </mesh>
+          {/* Elbow Joint Shield */}
+          <group position={[-0.21, -0.32, 0.1]}>
+            <mesh>
+              <sphereGeometry args={[0.065, 12, 12]} />
+              <primitive object={matGraphiteJoint} attach="material" />
+            </mesh>
+            <mesh rotation={[0, Math.PI / 2, 0]} position={[0, 0, 0]}>
+              <cylinderGeometry args={[0.048, 0.048, 0.025, 12]} />
+              <primitive object={matGoldAccent} attach="material" />
+            </mesh>
+            {/* Articulated Hand */}
+            <group position={[-0.04, -0.12, 0.05]} rotation={[0.1, -0.05, -0.1]}>
+              <RobotHand
+                side="left"
+                isWaving={false}
+                materialBody={matWhiteBody}
+                materialJoint={matGraphiteJoint}
+              />
+            </group>
+          </group>
+        </group>
+
       </group>
     </group>
   );
 }
 
+// ----------------------------------------------------
+// PARENT AIVATAR CANVAS COMPONENT
+// ----------------------------------------------------
 interface AiAvatarProps {
   isThinking: boolean;
   isTyping: boolean;
+  isListening?: boolean;
   isWaving?: boolean;
 }
 
-export function AiAvatar({ isThinking, isTyping, isWaving = false }: AiAvatarProps) {
+export function AiAvatar({ isThinking, isTyping, isListening = false, isWaving = false }: AiAvatarProps) {
   return (
-    <div className="w-full h-full min-h-[300px]">
+    <div className="w-full h-full min-h-[300px] pointer-events-none">
       <Canvas
-        camera={{ position: [0, -0.05, 3.4], fov: 45 }}
+        style={{ pointerEvents: "none" }}
+        camera={{ position: [0, 0.05, 4.2], fov: 45 }}
         gl={{
           antialias: true,
           alpha: true,
@@ -562,25 +1068,33 @@ export function AiAvatar({ isThinking, isTyping, isWaving = false }: AiAvatarPro
         }}
         dpr={[1, 1.5]}
       >
-        <ambientLight intensity={0.75} />
+        {/* Soft fill ambient light */}
+        <ambientLight intensity={0.55} />
 
-        <pointLight position={[0, 2, 1.5]} intensity={2.0} color={isThinking ? "#10b981" : isTyping ? "#00f0ff" : "#00d8ff"} />
+        {/* Front key light for sharp glossy specular highlights */}
+        <directionalLight position={[2, 3, 2.5]} intensity={3.8} color="#ffffff" />
 
-        <directionalLight position={[0, 2, 4]} intensity={2.0} color="#ffffff" />
+        {/* Fill light from the left */}
+        <directionalLight position={[-2, 1, 2]} intensity={1.8} color="#ffffff" />
 
-        <directionalLight position={[-4, 2, -3]} intensity={3.5} color="#00d8ff" />
-        <directionalLight position={[4, 2, -3]} intensity={3.5} color="#8b5cf6" />
+        {/* Strong back rim light to carve silhouette out of dark background */}
+        <directionalLight position={[0, 2, -3]} intensity={4.8} color="#ffffff" />
 
-        <RobotHumanoid isThinking={isThinking} isTyping={isTyping} isWaving={isWaving} />
+        {/* Chest point light state indicator */}
+        <pointLight
+          position={[0, 0.2, 0.4]}
+          intensity={1.8}
+          distance={1.3}
+          color={isThinking ? "#10b981" : isListening ? "#f59e0b" : isTyping ? "#00f0ff" : "#3b82f6"}
+        />
+
+        <RobotHumanoid isThinking={isThinking} isTyping={isTyping} isListening={isListening} isWaving={isWaving} />
 
         <OrbitControls
-          enableZoom={false}
+          enableZoom={true}
           enablePan={false}
-          maxPolarAngle={Math.PI / 1.7}
-          minPolarAngle={Math.PI / 2.3}
-          maxAzimuthAngle={Math.PI / 6}
-          minAzimuthAngle={-Math.PI / 6}
-          rotateSpeed={0.5}
+          enableRotate={false}
+          target={[0, 0.12, 0]}
         />
       </Canvas>
     </div>

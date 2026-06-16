@@ -158,10 +158,16 @@ ${achievements.map(a => `- ${a}`).join("\n")}`;
     const education = KnowledgeService.getEducation();
     const recruiterAnswers = KnowledgeService.getRecruiterAnswers();
 
+    // 0. Resume / CV download
+    if (normalized.includes("resume") || normalized.includes(" cv") || normalized.includes("download") || normalized.includes("curriculum vitae")) {
+      return `Yeah sure, you can download my latest resume right here: /Sandeep_Resume_June_2026.pdf — just click that link to open or save it. It covers all my experience at TMITS, Priyaraja Electronics, and Zicops, my full skill set, and all my projects. Let me know if you have questions about anything in there.`;
+    }
+
     // 1. Contact Info
     if (normalized.includes("contact") || normalized.includes("email") || normalized.includes("phone") || normalized.includes("linkedin") || normalized.includes("github") || normalized.includes("gmail") || normalized.includes("location") || normalized.includes("address")) {
       return `Yeah sure, the best way to reach me is by email at sandeepkundekar1000@gmail.com, or you can call me at plus 91 8217291928. I'm based between Belgaum and Bengaluru in Karnataka. And my GitHub and LinkedIn are always open if you want to see my work or just connect.`;
     }
+
 
     // 2. Introduction / Greetings
     if (normalized.includes("hello") || normalized.includes("hi ") || normalized.includes("hey") || normalized.includes("who are you") || normalized.includes("introduce") || normalized.includes("about yourself")) {
@@ -267,6 +273,8 @@ STRICT RULES — NEVER BREAK THESE:
 GOOD EXAMPLE (natural): "Yeah so I've been doing frontend work for a little over two years now. Most of my time has been with React and Next.js, honestly that's where I feel most confident. I've shipped a bunch of stuff at TMITS including a full e-commerce platform that ended up boosting their Lighthouse score by thirty percent."
 
 BAD EXAMPLE (do not do this): "Here are my skills: React, Next.js, TypeScript. I have experience at TMITS. My projects include..."
+
+RESUME: If anyone asks for my resume or CV, tell them they can download it at this URL: /Sandeep_Resume_June_2026.pdf — say this naturally in conversation, like "yeah you can grab my resume at /Sandeep_Resume_June_2026.pdf".
 
 INFORMATION ABOUT SANDEEP (use this as your source of truth, do not make things up):
 ${context}

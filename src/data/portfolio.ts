@@ -41,7 +41,7 @@ export const portfolioData = {
     github: "https://github.com/sandeepkundekar11",
     linkedin: "https://www.linkedin.com/in/sandeep-kundekar-044a711b2/",
     location: "Belgaum / Bengaluru, Karnataka, India",
-    resumeUrl: "#"
+    resumeUrl: "/Sandeep_Resume_June_2026.pdf"
   },
   skills: [
     {

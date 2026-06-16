@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, Suspense } from "react";
 import { useThrottledMouseCoords } from "../../hooks/useMousePosition";
 import { AnimatePresence, motion } from "framer-motion";
-import { Send, Bot, Terminal, RefreshCw, Volume2, VolumeX, X, Sliders } from "lucide-react";
+import { Send, Bot, Terminal, RefreshCw, Volume2, VolumeX, X, Sliders, Mic, MicOff } from "lucide-react";
 import { useChatService } from "../../services/chatService";
 import { VoiceSettingsPanel } from "../ui/VoiceSettingsPanel";
+import { useSpeechToText } from "../../hooks/useSpeechToText";
 
 const AiAvatar = React.lazy(() =>
   import("../three/AiAvatar").then((module) => ({ default: module.AiAvatar }))
@@ -37,7 +38,7 @@ export function AiAssistantWidget() {
             setVoiceLabel(name.toUpperCase());
             return;
           }
-        } catch (e) {}
+        } catch (e) { }
       }
       setVoiceLabel("SYS_DEFAULT");
     };
@@ -70,6 +71,20 @@ export function AiAssistantWidget() {
   } = useChatService(
     "Establishing full-screen synergy uplink via OpenAI gpt-oss-120b...",
     "Neural uplink complete. I have taken full screen control. I am AI Sandeep, Sandeep's direct digital clone. How can I assist you with my skill matrix, career history, or projects today?"
+  );
+
+  const {
+    isListening,
+    toggleListening,
+    isSupported: isSpeechSupported
+  } = useSpeechToText(
+    () => { }, // Do not paste the intermediate spoken text to the text input box
+    (finalText) => {
+      handleSend(finalText);
+    },
+    () => {
+      cancelSpeech();
+    }
   );
 
   // Lock scroll when full screen is open
@@ -170,7 +185,7 @@ export function AiAssistantWidget() {
             </button>
 
             {/* LEFT SIDE: Immersive Fullscreen 3D Scene + Sci-Fi HUD overlays */}
-            <div className="flex-grow h-[45vh] lg:h-full relative flex flex-col justify-between p-6 sm:p-8 select-none">
+            <div className="flex-grow h-[45vh] lg:h-full relative flex flex-col justify-between p-6 sm:p-8 select-none z-10">
 
               {/* Sci-Fi HUD Header overlays */}
               <div className="flex justify-between items-start pointer-events-none z-10">
@@ -198,9 +213,35 @@ export function AiAssistantWidget() {
               {/* R3F 3D Humanoid Canvas */}
               <div className="absolute inset-0 z-0">
                 <Suspense fallback={<AvatarFallback />}>
-                  <AiAvatar isThinking={isThinking} isTyping={isTyping || isSpeaking} isWaving={isWaving} />
+                  <AiAvatar isThinking={isThinking} isTyping={isTyping || isSpeaking} isListening={isListening} isWaving={isWaving} />
                 </Suspense>
               </div>
+
+              {/* Floating Microphone Control Panel near the 3D model */}
+              {isSpeechSupported && (
+                <div className="absolute bottom-14 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1.5 pointer-events-auto">
+                  <button
+                    type="button"
+                    onClick={toggleListening}
+                    disabled={isThinking || isTyping || isSpeaking}
+                    className={`w-14 h-14 rounded-full border-2 transition-all duration-300 flex items-center justify-center shadow-lg ${isListening
+                      ? "bg-red-500/25 border-red-500 text-red-500 shadow-[0_0_25px_rgba(239,68,68,0.6)] animate-pulse scale-110"
+                      : (isThinking || isTyping || isSpeaking)
+                        ? "bg-space-black/40 border-space-border/20 text-gray-600 cursor-not-allowed opacity-40"
+                        : "bg-space-black/70 hover:bg-cyber-cyan/20 border-cyber-purple/50 hover:border-cyber-cyan text-cyber-purple hover:text-cyber-cyan hover:shadow-[0_0_15px_rgba(6,182,212,0.4)]"
+                      }`}
+                    title={isListening ? "Stop Voice Input" : (isThinking || isTyping || isSpeaking) ? "Uplink Busy" : "Initiate Voice Uplink"}
+                  >
+                    {isListening ? <MicOff className="w-6 h-6 animate-bounce" /> : <Mic className="w-6 h-6" />}
+                  </button>
+                  <span className={`text-[8px] font-orbitron tracking-widest font-extrabold px-2 py-0.5 rounded border bg-space-black/90 ${isListening
+                    ? "text-red-500 border-red-500/40 animate-pulse"
+                    : "text-cyber-purple/80 border-cyber-purple/20"
+                    }`}>
+                    {isListening ? "VOICE_ACTIVE" : "SPEECH_TRANSMISSION"}
+                  </span>
+                </div>
+              )}
 
               {/* Sci-Fi HUD Footer overlays */}
               <div className="flex justify-between items-end pointer-events-none z-10 text-[9px] font-space text-gray-500 tracking-wider">
@@ -264,11 +305,10 @@ export function AiAssistantWidget() {
                   <button
                     type="button"
                     onClick={() => setShowVoiceSettings(!showVoiceSettings)}
-                    className={`p-1.5 rounded border transition-all duration-200 cursor-pointer ${
-                      showVoiceSettings
-                        ? "bg-cyber-purple/20 border-cyber-purple text-white shadow-[0_0_8px_rgba(139,92,246,0.3)]"
-                        : "hover:bg-space-black/80 border-space-border/30 text-gray-400 hover:text-white"
-                    }`}
+                    className={`p-1.5 rounded border transition-all duration-200 cursor-pointer ${showVoiceSettings
+                      ? "bg-cyber-purple/20 border-cyber-purple text-white shadow-[0_0_8px_rgba(139,92,246,0.3)]"
+                      : "hover:bg-space-black/80 border-space-border/30 text-gray-400 hover:text-white"
+                      }`}
                     title="Voice Modulation Settings"
                   >
                     <Sliders className="w-3.5 h-3.5" />
@@ -285,15 +325,15 @@ export function AiAssistantWidget() {
                     <VoiceSettingsPanel onClose={() => setShowVoiceSettings(false)} />
                   </div>
                 )}
-                
+
                 {messages.map((msg) => (
                   <div
                     key={msg.id}
                     className={`flex ${msg.sender === "user"
-                        ? "justify-end"
-                        : msg.sender === "system"
-                          ? "justify-center"
-                          : "justify-start"
+                      ? "justify-end"
+                      : msg.sender === "system"
+                        ? "justify-center"
+                        : "justify-start"
                       }`}
                   >
                     {msg.sender === "system" ? (
@@ -304,8 +344,8 @@ export function AiAssistantWidget() {
                     ) : (
                       <div
                         className={`max-w-[90%] rounded-xl px-3.5 py-3 flex gap-2.5 items-start border ${msg.sender === "user"
-                            ? "bg-cyber-purple/15 border-cyber-purple/45 text-white"
-                            : "bg-[#0b0b14]/90 border-space-border/30 text-gray-100"
+                          ? "bg-cyber-purple/15 border-cyber-purple/45 text-white"
+                          : "bg-[#0b0b14]/90 border-space-border/30 text-gray-100"
                           }`}
                       >
                         {msg.sender === "ai" && (
@@ -313,8 +353,29 @@ export function AiAssistantWidget() {
                             <Bot className="w-3.5 h-3.5 text-cyber-purple" />
                           </div>
                         )}
-                        <div className="flex flex-col gap-1">
-                          <p className="whitespace-pre-line text-justify leading-relaxed">{msg.text}</p>
+                        <div className="flex flex-col gap-2">
+                          <p className="whitespace-pre-line text-justify leading-relaxed">
+                            {msg.text.includes("/Sandeep_Resume_June_2026.pdf")
+                              ? msg.text.split("/Sandeep_Resume_June_2026.pdf").map((part, i, arr) =>
+                                i < arr.length - 1 ? (
+                                  <span key={i}>
+                                    {part}
+                                    <a
+                                      href="/Sandeep_Resume_June_2026.pdf"
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      download="Sandeep_Resume_June_2026.pdf"
+                                      className="inline-flex items-center gap-1 px-2 py-0.5 mx-1 rounded bg-cyber-cyan/15 border border-cyber-cyan/40 text-cyber-cyan text-[10px] font-bold tracking-wide hover:bg-cyber-cyan/25 transition-colors duration-200"
+                                    >
+                                      ↓ Download Resume
+                                    </a>
+                                  </span>
+                                ) : (
+                                  <span key={i}>{part}</span>
+                                )
+                              )
+                              : msg.text}
+                          </p>
                           <span className="text-[7.5px] text-gray-600 font-mono self-end mt-1">
                             {msg.timestamp}
                           </span>
@@ -367,13 +428,19 @@ export function AiAssistantWidget() {
                     type="text"
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
-                    placeholder={isThinking || isTyping ? "Synthesizing answer..." : "Input query telemetry..."}
+                    placeholder={
+                      isListening
+                        ? "Listening... Speak now..."
+                        : isThinking || isTyping
+                          ? "Synthesizing answer..."
+                          : "Input query telemetry..."
+                    }
                     disabled={isThinking || isTyping}
                     className="flex-grow px-3 py-2 bg-transparent focus:outline-none font-space text-sm text-white placeholder-gray-500"
                   />
                   <button
                     type="submit"
-                    disabled={isThinking || isTyping || !inputValue.trim()}
+                    disabled={isThinking || isTyping || !inputValue.trim() || isListening}
                     className="p-2.5 rounded-md bg-cyber-purple/20 hover:bg-cyber-purple/40 border border-cyber-purple/35 hover:border-cyber-purple text-white transition-all duration-200 cursor-pointer disabled:opacity-20 disabled:pointer-events-none"
                   >
                     <Send className="w-3.5 h-3.5" />

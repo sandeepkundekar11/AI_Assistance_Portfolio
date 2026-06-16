@@ -1,7 +1,8 @@
 import React, { Suspense, useState, useEffect } from "react";
-import { Send, Bot, Terminal, Shield, RefreshCw, Volume2, VolumeX, Sliders } from "lucide-react";
+import { Send, Bot, Terminal, Shield, RefreshCw, Volume2, VolumeX, Sliders, Mic, MicOff } from "lucide-react";
 import { useChatService } from "../../services/chatService";
 import { VoiceSettingsPanel } from "../ui/VoiceSettingsPanel";
+import { useSpeechToText } from "../../hooks/useSpeechToText";
 
 const AiAvatar = React.lazy(() =>
   import("../three/AiAvatar").then((module) => ({ default: module.AiAvatar }))
@@ -37,11 +38,26 @@ export function AiSandeep() {
     isSpeaking,
     isMuted,
     toggleMute,
+    cancelSpeech,
     handleSend,
     chatEndRef,
   } = useChatService(
     "Establishing secure uplink via OpenAI gpt-oss-120b...",
     "Hey there! I'm AI Sandeep, a neural replica of Sandeep Kundekar. I'm connected to my career database, project source blueprints, and skill records. Ask me anything, and I'll talk about my work!"
+  );
+
+  const {
+    isListening,
+    toggleListening,
+    isSupported: isSpeechSupported
+  } = useSpeechToText(
+    () => {}, // Do not paste the intermediate spoken text to the text input box
+    (finalText) => {
+      handleSend(finalText);
+    },
+    () => {
+      cancelSpeech();
+    }
   );
 
   const quickPrompts = [
@@ -71,7 +87,7 @@ export function AiSandeep() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
           
           {/* 3D AI Hologram (Left) */}
-          <div className="lg:col-span-5 h-[380px] lg:h-auto min-h-[300px] glow-card rounded-2xl border border-space-border/25 bg-space-card/30 relative overflow-hidden flex flex-col justify-between p-4">
+          <div className="lg:col-span-5 h-[380px] lg:h-auto min-h-[300px] glow-card rounded-2xl border border-space-border/25 bg-space-card/30 relative overflow-hidden flex flex-col justify-between p-4 z-10">
             {/* Hologram header */}
             <div className="flex justify-between items-center text-[9px] font-space text-gray-500 tracking-wider">
               <span>HOLOGRAPHIC_INTERFACE // V_0.4</span>
@@ -84,11 +100,39 @@ export function AiSandeep() {
             {/* 3D Scene */}
             <div className="w-full flex-grow flex items-center justify-center relative">
               <Suspense fallback={<AvatarFallback />}>
-                <AiAvatar isThinking={isThinking} isTyping={isTyping || isSpeaking} isWaving={isWaving} />
+                <AiAvatar isThinking={isThinking} isTyping={isTyping || isSpeaking} isListening={isListening} isWaving={isWaving} />
               </Suspense>
               
               {/* Matrix scanlines overlay */}
               <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-transparent via-cyber-purple/2 to-transparent bg-[length:100%_4px] opacity-20" />
+
+              {/* Floating Microphone Control Panel near the 3D model */}
+              {isSpeechSupported && (
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1.5 pointer-events-auto">
+                  <button
+                    type="button"
+                    onClick={toggleListening}
+                    disabled={isThinking || isTyping || isSpeaking}
+                    className={`w-12 h-12 rounded-full border transition-all duration-300 flex items-center justify-center shadow-md ${
+                      isListening
+                        ? "bg-red-500/25 border-red-500 text-red-500 shadow-[0_0_20px_rgba(239,68,68,0.6)] animate-pulse scale-105"
+                        : (isThinking || isTyping || isSpeaking)
+                        ? "bg-space-black/40 border-space-border/20 text-gray-600 cursor-not-allowed opacity-40"
+                        : "bg-space-black/70 hover:bg-cyber-cyan/25 border-cyber-purple/45 hover:border-cyber-cyan text-cyber-purple hover:text-cyber-cyan"
+                    }`}
+                    title={isListening ? "Stop Voice Input" : (isThinking || isTyping || isSpeaking) ? "Uplink Busy" : "Initiate Voice Uplink"}
+                  >
+                    {isListening ? <MicOff className="w-5 h-5 animate-bounce" /> : <Mic className="w-5 h-5" />}
+                  </button>
+                  <span className={`text-[7px] font-orbitron tracking-widest font-extrabold px-1.5 py-0.5 rounded border bg-space-black/90 ${
+                    isListening 
+                      ? "text-red-500 border-red-500/40 animate-pulse" 
+                      : "text-cyber-purple/80 border-cyber-purple/20"
+                  }`}>
+                    {isListening ? "VOICE_ACTIVE" : "SPEECH_TRANSMISSION"}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Interface footer status */}
@@ -229,17 +273,23 @@ export function AiSandeep() {
               }}
               className="p-4 bg-space-black/80 border-t border-space-border/20 flex gap-3 items-center"
             >
-              <input
+               <input
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                placeholder={isThinking || isTyping ? "Uplink is busy decoding..." : "Query AI Sandeep via gpt-oss-120b..."}
+                placeholder={
+                  isListening
+                    ? "Listening... Speak now..."
+                    : isThinking || isTyping
+                    ? "Uplink is busy decoding..."
+                    : "Query AI Sandeep via gpt-oss-120b..."
+                }
                 disabled={isThinking || isTyping}
                 className="flex-grow px-4 py-3 bg-space-black/90 rounded-lg border border-space-border/25 focus:border-cyber-purple focus:outline-none font-space text-xs text-white placeholder-gray-500"
               />
               <button
                 type="submit"
-                disabled={isThinking || isTyping || !inputValue.trim()}
+                disabled={isThinking || isTyping || !inputValue.trim() || isListening}
                 className="p-3 rounded-lg bg-cyber-purple/20 hover:bg-cyber-purple/45 border border-cyber-purple/40 hover:border-cyber-purple text-white transition-all duration-200 cursor-pointer shrink-0 disabled:opacity-30 disabled:pointer-events-none"
               >
                 <Send className="w-4 h-4" />

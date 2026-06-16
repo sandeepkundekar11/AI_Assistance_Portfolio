@@ -38,13 +38,12 @@ export function Navbar({ activeTab, setActiveTab }: NavbarProps) {
 
   return (
     <nav
-      className={`fixed top-0 left-0 w-full z-[110] transition-all duration-300 ${
-        isOpen
+      className={`fixed top-0 left-0 w-full z-[110] transition-all duration-300 ${isOpen
           ? "bg-transparent border-b-transparent"
           : scrolled
             ? "bg-space-black/60 border-b border-space-border backdrop-blur-md"
             : "bg-transparent"
-      } ${scrolled ? "py-4" : "py-6"}`}
+        } ${scrolled ? "py-4" : "py-6"}`}
     >
       <div className="relative z-[120] max-w-7xl mx-auto px-6 flex justify-between items-center">
         {/* Logo */}
@@ -66,9 +65,8 @@ export function Navbar({ activeTab, setActiveTab }: NavbarProps) {
               <li key={link.id}>
                 <button
                   onClick={() => handleTabClick(link.id)}
-                  className={`relative py-1 transition-colors duration-200 focus:outline-none hover:text-cyber-cyan cursor-pointer ${
-                    activeTab === link.id ? "text-cyber-cyan" : "text-gray-400"
-                  }`}
+                  className={`relative py-1 transition-colors duration-200 focus:outline-none hover:text-cyber-cyan cursor-pointer ${activeTab === link.id ? "text-cyber-cyan" : "text-gray-400"
+                    }`}
                 >
                   {link.label}
                   {activeTab === link.id && (
@@ -78,9 +76,10 @@ export function Navbar({ activeTab, setActiveTab }: NavbarProps) {
               </li>
             ))}
           </ul>
-          
+
           <a
             href={portfolioData.personalInfo.resumeUrl}
+            target="_blank"
             className="flex items-center gap-1.5 px-4 py-2 bg-cyber-purple/20 hover:bg-cyber-purple/35 border border-cyber-purple/40 hover:border-cyber-purple rounded-md font-space text-xs font-semibold text-white tracking-wide transition-all duration-200"
           >
             <span>Resume</span>
@@ -100,18 +99,16 @@ export function Navbar({ activeTab, setActiveTab }: NavbarProps) {
 
       {/* Mobile Drawer */}
       <div
-        className={`fixed inset-0 bg-space-black/95 backdrop-blur-lg z-[100] transition-all duration-300 lg:hidden flex flex-col justify-between p-8 pt-24 ${
-          isOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-full pointer-events-none"
-        }`}
+        className={`fixed inset-0 bg-space-black/95 backdrop-blur-lg z-[100] transition-all duration-300 lg:hidden flex flex-col justify-between p-8 pt-24 ${isOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-full pointer-events-none"
+          }`}
       >
         <ul className="flex flex-col gap-6 text-xl font-space font-bold tracking-wider">
           {navLinks.map((link) => (
             <li key={link.id}>
               <button
                 onClick={() => handleTabClick(link.id)}
-                className={`py-1 text-left w-full transition-colors duration-200 cursor-pointer ${
-                  activeTab === link.id ? "text-cyber-cyan text-glow-cyan" : "text-gray-400 hover:text-white"
-                }`}
+                className={`py-1 text-left w-full transition-colors duration-200 cursor-pointer ${activeTab === link.id ? "text-cyber-cyan text-glow-cyan" : "text-gray-400 hover:text-white"
+                  }`}
               >
                 {link.label}
               </button>

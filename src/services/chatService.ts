@@ -111,20 +111,70 @@ export function useChatService(systemUplinkText: string, initialMessageText: str
     }, typeSpeed);
   };
 
-  const thinkingPhrases = [
+  // Tracks whether thinking loop should keep chaining
+  const isThinkingActiveRef = useRef(false);
+
+  // Pool of natural filler phrases — split into openers and follow-ups
+  const thinkingOpeners = [
     "Hmm, let me think about that for a second.",
     "Good question, give me just a moment.",
     "Yeah, let me pull that up for you.",
     "Sure, one sec while I think through that.",
     "Alright, let me work through that real quick.",
-    "On it, just give me a moment.",
     "Let me dig into that for you.",
   ];
+
+  const thinkingFillers = [
+    "So there's actually quite a bit I can say about this.",
+    "Yeah this is something I know pretty well.",
+    "I've spent a good chunk of time on this.",
+    "Let me make sure I get this right for you.",
+    "I want to give you a proper answer here.",
+    "Just putting together the best way to explain this.",
+    "I've worked on this a lot so bear with me.",
+    "Almost there, just organizing my thoughts.",
+  ];
+
+  const startThinkingLoop = (isMuted: boolean) => {
+    isThinkingActiveRef.current = true;
+    let usedOpener = false;
+
+    const speakNext = () => {
+      if (!isThinkingActiveRef.current) return;
+
+      const pool = usedOpener ? thinkingFillers : thinkingOpeners;
+      usedOpener = true;
+      const phrase = pool[Math.floor(Math.random() * pool.length)];
+
+      AvatarService.speak(
+        phrase,
+        isMuted,
+        () => setIsSpeaking(true),
+        () => {
+          // When phrase ends, chain the next one after a short natural pause
+          if (isThinkingActiveRef.current) {
+            setTimeout(speakNext, 600 + Math.random() * 800);
+          } else {
+            setIsSpeaking(false);
+          }
+        }
+      );
+    };
+
+    speakNext();
+  };
+
+  const stopThinkingLoop = () => {
+    isThinkingActiveRef.current = false;
+    AvatarService.cancel();
+    setIsSpeaking(false);
+  };
 
   const handleSend = async (textToSend: string) => {
     if (!textToSend.trim() || isThinking || isTyping) return;
 
     // Interrupt any active voice synthesis when sending a new message
+    stopThinkingLoop();
     cancelSpeech();
 
     // 1. User message
@@ -158,9 +208,8 @@ export function useChatService(systemUplinkText: string, initialMessageText: str
       return;
     }
 
-    // Speak a natural thinking phrase while LLM processes
-    const thinkingPhrase = thinkingPhrases[Math.floor(Math.random() * thinkingPhrases.length)];
-    AvatarService.speak(thinkingPhrase, isMuted, () => setIsSpeaking(true), () => setIsSpeaking(false));
+    // Start continuous talking loop while LLM processes
+    startThinkingLoop(isMuted);
 
     // Call dynamic LLM via AIService
     try {
@@ -174,12 +223,12 @@ export function useChatService(systemUplinkText: string, initialMessageText: str
       history.push({ role: "user", content: textToSend });
 
       const responseText = await AIService.generateLLMResponse(textToSend, history);
-      // Stop thinking phrase, then stream real answer
-      cancelSpeech();
+      // Stop thinking loop, then stream real answer
+      stopThinkingLoop();
       streamResponse(responseText);
     } catch (err: any) {
       console.error(err);
-      cancelSpeech();
+      stopThinkingLoop();
       setIsThinking(false);
       setMessages(prev => [
         ...prev,
@@ -192,6 +241,7 @@ export function useChatService(systemUplinkText: string, initialMessageText: str
       ]);
     }
   };
+
 
   return {
     messages,
