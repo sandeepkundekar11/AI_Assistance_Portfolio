@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Menu, X, ArrowUpRight, Cpu } from "lucide-react";
+import { Menu, X, ArrowUpRight, Cpu, Bot } from "lucide-react";
 import { portfolioData } from "../../data/portfolio";
 
 interface NavbarProps {
@@ -18,6 +18,7 @@ export function Navbar({ activeTab, setActiveTab }: NavbarProps) {
     { id: "experience", label: "Experience" },
     { id: "projects", label: "Projects" },
     { id: "architecture", label: "Architecture" },
+    { id: "ai-assistant", label: "AI Assistant" },
     { id: "performance", label: "Telemetry" },
     { id: "contact", label: "Uplink" },
   ];
@@ -77,6 +78,14 @@ export function Navbar({ activeTab, setActiveTab }: NavbarProps) {
             ))}
           </ul>
 
+          <button
+            onClick={() => window.dispatchEvent(new Event("open-ai-chat"))}
+            className="flex items-center gap-1.5 px-4 py-2 bg-cyber-cyan/15 hover:bg-cyber-cyan/30 border border-cyber-cyan/40 hover:border-cyber-cyan rounded-md font-space text-xs font-semibold text-white tracking-wide transition-all duration-200 cursor-pointer shadow-[0_0_10px_rgba(6,182,212,0.1)] hover:shadow-[0_0_15px_rgba(6,182,212,0.25)]"
+          >
+            <Bot className="w-3.5 h-3.5 text-cyber-cyan animate-pulse" />
+            <span>AI Synergy</span>
+          </button>
+
           <a
             href={portfolioData.personalInfo.resumeUrl}
             target="_blank"
@@ -116,10 +125,22 @@ export function Navbar({ activeTab, setActiveTab }: NavbarProps) {
           ))}
         </ul>
 
-        <div className="pt-8 border-t border-space-border/20">
+        <div className="pt-8 border-t border-space-border/20 flex flex-col gap-3">
+          <button
+            onClick={() => {
+              setIsOpen(false);
+              window.dispatchEvent(new Event("open-ai-chat"));
+            }}
+            className="flex justify-center items-center gap-2 w-full py-4 bg-cyber-cyan/20 border border-cyber-cyan/50 rounded-lg font-space text-base font-bold text-white tracking-widest cursor-pointer hover:bg-cyber-cyan/35 transition-all duration-200"
+          >
+            <Bot className="w-5 h-5 text-cyber-cyan animate-pulse" />
+            <span>AI SYNERGY PORTAL</span>
+          </button>
+
           <a
             href={portfolioData.personalInfo.resumeUrl}
-            className="flex justify-center items-center gap-2 w-full py-4 bg-cyber-purple/30 border border-cyber-purple/50 rounded-lg font-space text-base font-bold text-white tracking-widest"
+            target="_blank"
+            className="flex justify-center items-center gap-2 w-full py-4 bg-cyber-purple/30 border border-cyber-purple/50 rounded-lg font-space text-base font-bold text-white tracking-widest hover:bg-cyber-purple/45 transition-all duration-200"
           >
             <span>VIEW RESUME</span>
             <ArrowUpRight className="w-5 h-5" />

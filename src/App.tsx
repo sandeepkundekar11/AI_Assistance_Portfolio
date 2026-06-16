@@ -21,6 +21,7 @@ const Projects = React.lazy(() => import("./components/sections/Projects").then(
 const Architecture = React.lazy(() => import("./components/sections/Architecture").then(m => ({ default: m.Architecture })));
 const Performance = React.lazy(() => import("./components/sections/Performance").then(m => ({ default: m.Performance })));
 const Contact = React.lazy(() => import("./components/sections/Contact").then(m => ({ default: m.Contact })));
+const AiSandeep = React.lazy(() => import("./components/sections/AiSandeep").then(m => ({ default: m.AiSandeep })));
 
 // Fallback spinner for dynamic modules loading
 function ModuleFallback() {
@@ -170,6 +171,7 @@ export default function App() {
                   </div>
                 )}
                 {activeTab === "performance" && <Performance />}
+                {activeTab === "ai-assistant" && <AiSandeep />}
                 {activeTab === "contact" && (
                   <div className="animate-fade-in flex flex-col flex-1 min-h-0">
                     <Contact />
