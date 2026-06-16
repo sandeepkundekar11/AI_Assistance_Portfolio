@@ -140,6 +140,56 @@ export function AiAssistantWidget() {
 
   return (
     <>
+      <style dangerouslySetInnerHTML={{
+        __html: `
+        @keyframes bounce-y-arrow {
+          0%, 100% { transform: translateY(0) scale(1); }
+          50% { transform: translateY(-8px) scale(1.05); }
+        }
+        @keyframes pulse-glowing {
+          0% { box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.55), 0 0 10px rgba(139, 92, 246, 0.45); }
+          70% { box-shadow: 0 0 0 15px rgba(6, 182, 212, 0), 0 0 25px rgba(139, 92, 246, 0.7); }
+          100% { box-shadow: 0 0 0 0 rgba(6, 182, 212, 0), 0 0 10px rgba(139, 92, 246, 0.45); }
+        }
+        @keyframes pulse-concentric {
+          0% { transform: scale(0.95); opacity: 0.85; }
+          100% { transform: scale(2.8); opacity: 0; }
+        }
+      `}} />
+
+      {/* Floating Arrow Indicator pointing down to the AI Assistant button */}
+      {!isOpen && (
+        <div
+          className="fixed bottom-22 left-10 z-[100] text-cyber-cyan font-bold text-lg pointer-events-none select-none flex flex-col items-center gap-0.5"
+          style={{
+            animation: "bounce-y-arrow 1.2s infinite ease-in-out",
+            textShadow: "0 0 10px rgba(6, 182, 212, 0.95), 0 0 20px rgba(6, 182, 212, 0.6)"
+          }}
+        >
+          <span className="text-[9px] font-space tracking-widest text-glow-cyan">AI</span>
+          <span className="rotate-90 inline-block">➔</span>
+        </div>
+      )}
+
+      {/* Concentric glowing sonar pulse rings behind the button */}
+      {!isOpen && (
+        <div className="fixed bottom-6 left-6 z-[90] w-14 h-14 pointer-events-none select-none">
+          <div className="absolute inset-0 rounded-full border border-cyber-cyan" style={{ animation: "pulse-concentric 2.2s infinite ease-out" }} />
+          <div className="absolute inset-0 rounded-full border border-cyber-purple" style={{ animation: "pulse-concentric 2.2s infinite ease-out 0.7s" }} />
+          <div className="absolute inset-0 rounded-full border border-cyber-cyan" style={{ animation: "pulse-concentric 2.2s infinite ease-out 1.4s" }} />
+        </div>
+      )}
+
+      {/* Attention grabbing neon text tag */}
+      {!isOpen && (
+        <div
+          className="fixed bottom-9 left-23 z-[100] bg-[#070712]/95 border border-cyber-cyan/45 rounded-lg px-2.5 py-1 font-space text-[9px] font-bold text-cyber-cyan tracking-widest pointer-events-none select-none shadow-[0_0_15px_rgba(6,182,212,0.45)]"
+          style={{ animation: "pulse-glowing 2s infinite ease-in-out" }}
+        >
+          TALK TO MY CLONE 🤖
+        </div>
+      )}
+
       {/* 1. FIXED FLOATING BUTTON TRIGGER (Bottom-Left) */}
       <button
         onClick={() => {
@@ -149,7 +199,10 @@ export function AiAssistantWidget() {
             cancelSpeech();
           }
         }}
-        className="fixed bottom-6 left-6 z-[100] w-14 h-14 rounded-full bg-space-card border-2 border-cyber-purple/80 hover:border-cyber-cyan flex items-center justify-center cursor-pointer shadow-[0_0_15px_rgba(139,92,246,0.35)] hover:shadow-[0_0_20px_rgba(6,182,212,0.55)] transition-all duration-300 backdrop-blur-md group focus:outline-none"
+        className="fixed bottom-6 left-6 z-[100] w-14 h-14 rounded-full bg-space-card border-2 border-cyber-purple/80 hover:border-cyber-cyan flex items-center justify-center cursor-pointer transition-all duration-300 backdrop-blur-md group focus:outline-none"
+        style={{
+          animation: "pulse-glowing 2s infinite ease-in-out"
+        }}
         title="AI Sandeep Synergy Portal"
       >
         <div className="absolute top-0 right-0 w-3 h-3 rounded-full bg-cyber-emerald border border-space-black animate-ping" />
