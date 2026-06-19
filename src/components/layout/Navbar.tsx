@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Menu, X, ArrowUpRight, Cpu, Bot } from "lucide-react";
+import { Menu, X, ArrowUpRight, Cpu } from "lucide-react";
 import { portfolioData } from "../../data/portfolio";
 
 interface NavbarProps {
